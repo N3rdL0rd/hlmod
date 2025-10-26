@@ -60,6 +60,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
+      id: setup-python
 
     - name: Install Linux dependencies
       if: runner.os == 'Linux'
@@ -136,7 +137,8 @@ jobs:
       if: runner.os == 'Windows' && matrix.compiler == 'msvc'
       run: |
           cmake -S hlmod-hl -B hlmod-hl/build -G "Ninja" `
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DPython_EXECUTABLE:FILEPATH=${{ steps.setup-python.outputs.python-path }}
 
     - name: Configure CMake (Windows/MinGW)
       if: runner.os == 'Windows' && matrix.compiler == 'mingw'
