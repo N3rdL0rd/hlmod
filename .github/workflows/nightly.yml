@@ -281,6 +281,10 @@ jobs:
         Copy-Item -Path $STDLIB_PATH -Destination $ARTIFACT_DIR -Recurse
         Write-Host "Copied Python standard library to artifact directory."
 
+        git clone https://github.com/N3rdL0rd/hdlls hdlls-repo
+        Copy-Item -Path "hdlls-repo/*.hdll" -Destination $ARTIFACT_DIR
+        Write-Host "Copied pre-built hdlls to artifact directory."
+
     - name: Exclude test directory from artifact
       shell: bash
       run: |
