@@ -4,13 +4,13 @@ MOD_INFO = {
     "description": "",
     "version": "0.0.1",
     "dependencies": ["modcore"],
-    "enabled": False
+    "enabled": True
 }
 
 from modcore import hook
 from hlmod import get_obj_field, Hook, assert_code_sha, get_global
 from typing import Optional
-from stubs import TestClass, S_SuperTestClass
+from stubs import TestClass, S_SuperTestClass, SuperTestClass
 
 def initialize():
     # Haxe 4.3.6 Windows
@@ -33,6 +33,7 @@ def thing(self: Hook, val: float, val2: Optional[float], msg: str, val3: Optiona
     assert val3 is not None
     val3.do_a_thing()
     print(val3.test)
+    #print(SuperTestClass.STATIC_VAL)
     s_supertestclass: S_SuperTestClass = get_global(23)
     print(s_supertestclass)
     print(s_supertestclass.STATIC_VAL)
