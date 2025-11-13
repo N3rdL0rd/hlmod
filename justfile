@@ -81,9 +81,9 @@ hldiscord:
 
 
 pull:
-    cd hlmod-hl && proxychains git pull
+    cd hlmod-hl && proxychains git pull origin master
     proxychains git pull
 
 push:
-    cd hlmod-hl && proxychains git push
+    cd hlmod-hl && proxychains git push HEAD:master
     proxychains git push
