@@ -10,7 +10,7 @@ MOD_INFO = {
 from modcore import hook
 from hlmod import get_obj_field, Hook, assert_code_sha, get_global
 from typing import Optional
-from stubs import TestClass, S_SuperTestClass, SuperTestClass
+from stubs import TestClass, SuperTestClass
 
 def initialize():
     # Haxe 4.3.6 Windows
@@ -34,12 +34,17 @@ def thing(self: Hook, val: float, val2: Optional[float], msg: str, val3: Optiona
     val3.do_a_thing()
     print(val3.test)
     #print(SuperTestClass.STATIC_VAL)
-    s_supertestclass: S_SuperTestClass = get_global(23)
-    print(s_supertestclass)
-    print(s_supertestclass.STATIC_VAL)
-    self.call_original(val, val2, msg, val3)
+    # s_supertestclass: S_SuperTestClass = get_global(23)
+    # print(s_supertestclass)
+    # print(s_supertestclass.STATIC_VAL)
+    self.call_original(val, 2.0, msg, val3)
 
 @hook("$PatchMe.main")
 def hook_main(self: Hook):
     self.call_original()
     print("Called and hooked main!!")
+    
+@hook("$PatchMe.closure_test_2")
+def closure_test_2(self: Hook, closure):
+    print(closure)
+    self.call_original(closure)

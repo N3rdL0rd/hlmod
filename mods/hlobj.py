@@ -82,3 +82,19 @@ class HlEnum(IntEnum):
 class HlEnumObject(HlObject):
     """Base class for HL enum constructors that have parameters."""
     pass
+
+class HlCallable:
+    """
+    A proxy to a HL closure that can be passed as a reference and called.
+    """
+    
+    def __init__(self, ptr: 'HlPtr') -> None:
+        """
+        Creates a new HlCallable.
+        
+        This is typically called by hlmod itself, not by the user - but if you feel like it, you can call this yourself with a compatible HlPtr. Careful for memory safety!
+        """
+        self._hlmod_ptr = ptr
+    
+    def __call__(self, *args: Any) -> Any:
+        return hlmod.call_closure(self._hlmod_ptr, args)

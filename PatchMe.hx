@@ -1,3 +1,4 @@
+import haxe.Constraints.Function;
 import haxe.io.Bytes;
 
 class SuperTestClass {
@@ -25,6 +26,7 @@ class PatchMe {
         thing(val, val2, "Unpatched message!", new TestClass());
         array_test();
         trace(SuperTestClass.STATIC_VAL);
+        closure_test();
     }
 
     static function array_test() {
@@ -51,5 +53,18 @@ class PatchMe {
         } else {
             trace("Patch failed!");
         }
+    }
+
+    static function closure() {
+        trace("Closure!!");
+    }
+
+    static function closure_test() {
+        var cl = closure;
+        closure_test_2(cl);
+    }
+
+    static function closure_test_2(closure: Function) {
+        closure();
     }
 }

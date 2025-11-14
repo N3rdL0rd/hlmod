@@ -7,6 +7,8 @@ from typing import Any, Optional, Protocol, Tuple
 class HlPtr:
     """
     Light wrapper on a raw void* to an HL object.
+    Only accessible directly from failed or unexpected HL -> Python marshalling, and cannot be created from Python.
+    You can also get the underlying HlPtr to any HLObject instance from Python with `object._hlmod_ptr`.
     """
     
     @property
@@ -26,19 +28,21 @@ class HlPtr:
 
 class Hook:
     """
-    Hook context object
+    A hook context object passed to functions that hook HL code as the first argument, offsetting the rest.
     """
     
     findex: int
     """
-    The function index this hook was invoked for.
+    The function index this hook was invoked for. Can also be resolved to a name with `hlmod.findex_for_name` and the like.
     """
     
     def call_original(*args: Any) -> Any:
         """
-        Calls the original function that was hooked.
+        Calls the original function that was hooked with the passed arguments.
         """
         ...
+        
+    # TODO: as_closure to get to HLCallable
 
         
 class HookCallback(Protocol):
@@ -122,6 +126,12 @@ def dump_stack() -> None:
 def findex_for_name(name: str) -> int:
     """
     Gets the corresponding findex for a given function's name. Most likely, you want to just use `modcore.hook()` with a string argument and hlmod will resolve it for you. You're welcome!
+    """
+    ...
+
+def call_closure(vclosure: HlPtr, args: Tuple[Any,...]) -> Any:
+    """
+    Calls a closure by its pointer with the given arguments.
     """
     ...
 
