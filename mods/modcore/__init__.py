@@ -6,6 +6,9 @@ import inspect
 import hlmod
 from typing import List, Callable
 import stubs
+from os.path import isfile
+import glob
+from importlib import import_module
 
 MOD_INFO = {
     "id": "modcore",
@@ -14,6 +17,21 @@ MOD_INFO = {
     "version": "0.0.1",
     "dependencies": []
 }
+
+def load_all_stubs(base_dir: str = "./mods/stubs"):
+    """
+    Loads all stubs generated from the HL bytecode.
+    If this function is not called, you may experience issues working with stubbed types
+    wrapped in Dyn being passed from HL to Python, but there may be issues in stub generation 
+    that prevent this from working. You should only really ever call this once.
+    
+    Thanks to @snoopinou30 on the Hashlink Modding Community Discord for figuring this out!
+    """
+    stub_files = glob.glob(base_dir + "/**", recursive=True)
+    for f in stub_files:
+        if isfile(f) and not f.endswith("__init__.py") and not "__pycache__" in f:
+            f = f[:-3].removeprefix(base_dir + "/").replace("/", ".")
+            import_module("stubs." + f)
 
 def hook(target: str|int|List[int]):
     """
