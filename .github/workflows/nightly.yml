@@ -239,6 +239,8 @@ jobs:
 
         cp "$LIBPYTHON_PATH" "$ARTIFACT_DIR/"
         echo "Copied libpython to artifact directory."
+        
+        cp /usr/lib/x86_64-linux-gnu/libmbed*.so* "$ARTIFACT_DIR/" || true
 
         STDLIB_PATH=$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')
         if [ ! -d "$STDLIB_PATH" ]; then
