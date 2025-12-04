@@ -174,7 +174,7 @@ jobs:
           cp ./hlmod-hl/src/hl.h hlsteam/native/include/
           
           cd hlsteam
-          make CXXFLAGS="-Inative/include" LFLAGS="-L../hlmod-hl/build/bin -lstdc++ -lsteam_api -lhl"
+          make CXXFLAGS="-Inative/include" LFLAGS="-L../hlmod-hl/build/bin -lstdc++"
           cd ..
 
           cp ./hlsteam/steam.hdll ./hlmod-hl/build/bin/
