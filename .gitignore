@@ -22,3 +22,4 @@ logs/
 files.txt
 *.dll
 hlmod*.log
+installer/test/

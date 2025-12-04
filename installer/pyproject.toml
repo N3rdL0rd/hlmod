@@ -1,0 +1,11 @@
+[project]
+name = "hlmod-installer"
+version = "0.1.0"
+description = "Smart automated installer for hlmod"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pyinstaller>=6.17.0",
+    "pyqt6>=6.10.0",
+    "requests>=2.32.5",
+]
