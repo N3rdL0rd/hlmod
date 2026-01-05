@@ -46,6 +46,8 @@ exec "$HLMOD_DIR/hl.bin" "$@"
 
 class Tweak(Enum):
     USE_EXISTING_STEAM = auto()
+    USE_EXISTING_SDL = auto()
+    USE_EXISTING_OPENAL = auto()
     INSTALL_DCMOD = auto()
     NO_BASE_MODS = auto()
 
@@ -148,6 +150,8 @@ class InstallWorker(QThread):
         if os.path.exists(os.path.join(self.directory, "steam.hdll")) and os.name == "posix":
             print("Using existing hlsteam.")
             tweaks.append(Tweak.USE_EXISTING_STEAM)
+        if os.path.exists(os.path.join(self.directory, "openal.hdll")) and os.name == "nt":
+            tweaks.append(Tweak.USE_EXISTING_OPENAL)
         if os.path.exists(os.path.join(self.directory, "deadcells")) or os.path.exists(os.path.join(self.directory, "deadcells.exe")):
             print("Installing hlmod.")
             tweaks.append(Tweak.INSTALL_DCMOD)
@@ -173,6 +177,11 @@ class InstallWorker(QThread):
         if not Tweak.NO_BASE_MODS in tweaks:
             shutil.copy(os.path.join(extract_dir, "mods", "hlobj.py"), os.path.join(self.directory, "mods", "hlobj.py"))
             shutil.copytree(os.path.join(extract_dir, "mods", "modcore"), os.path.join(self.directory, "mods", "modcore"))
+            
+        if Tweak.USE_EXISTING_OPENAL in tweaks:
+            if os.path.exists(os.path.join(self.directory, "OpenAL32.dll")):
+                shutil.copy(os.path.join(self.directory, "OpenAL32.dll"), os.path.join(extract_dir, "OpenAL32.dll"))
+            shutil.copy(os.path.join(self.directory, "openal.hdll"), os.path.join(extract_dir, "openal.hdll"))
 
         shutil.copy(os.path.join(extract_dir, "mods", "hlmod.pyi"), os.path.join(self.directory, "mods", "hlmod.pyi"))
          
