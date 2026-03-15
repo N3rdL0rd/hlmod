@@ -117,7 +117,7 @@ jobs:
       if: runner.os == 'Windows' && matrix.compiler == 'msvc'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - uses: krdlab/setup-haxe@v1
+    - uses: krdlab/setup-haxe@v2
       with:
         haxe-version: latest
 
