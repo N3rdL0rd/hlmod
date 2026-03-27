@@ -3,6 +3,7 @@ Internal, low-level module to interface more directly with hlmod. You should use
 """
 
 from typing import Any, Optional, Protocol, Tuple
+from hlobj import HlCallable
 
 class HlPtr:
     """
@@ -41,8 +42,12 @@ class Hook:
         Calls the original function that was hooked with the passed arguments.
         """
         ...
-        
-    # TODO: as_closure to get to HLCallable
+
+    def as_closure(self) -> HlCallable:
+        """
+        Returns the original hooked function as an `hlobj.HlCallable`.
+        """
+        ...
 
         
 class HookCallback(Protocol):

@@ -4,7 +4,7 @@ MOD_INFO = {
     "description": "",
     "version": "0.0.1",
     "dependencies": ["modcore"],
-    "enabled": False
+    "enabled": True
 }
 
 from modcore import hook
@@ -47,4 +47,5 @@ def hook_main(self: Hook):
 @hook("$PatchMe.closure_test_2")
 def closure_test_2(self: Hook, closure):
     print(closure)
+    closure()
     self.call_original(closure)

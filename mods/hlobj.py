@@ -95,6 +95,13 @@ class HlCallable:
         This is typically called by hlmod itself, not by the user - but if you feel like it, you can call this yourself with a compatible HlPtr. Careful for memory safety!
         """
         self._hlmod_ptr = ptr
+
+    @property
+    def ptr(self) -> int:
+        return self._hlmod_ptr.ptr
     
     def __call__(self, *args: Any) -> Any:
         return hlmod.call_closure(self._hlmod_ptr, args)
+
+    def __repr__(self) -> str:
+        return f"<HlCallable ptr=0x{self.ptr:X}>"
