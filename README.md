@@ -23,17 +23,26 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 
 ## Roadmap
 
+> [!NOTE]
+> Public stubs can now expose static methods and companion-backed members cleanly, but static data fields still depend on the backing HL static object existing at runtime. Access during early mod import is still a lifecycle gap that needs a proper runtime contract or fallback.
+
 - [x] Basic Python mods as modules, resolve dependencies, mod metadata
 - [x] JIT hooking to Python
 - [x] Basic casting of primitives from HL -> Python and Python -> HL
 - [x] HNULL casting support
 - [x] Obj wrappers, metaclasses and Python interfaces for HL objects
 - [ ] Static Obj support and global instance support
+  - [ ] Close the import-time lifecycle gap for static data fields
 - [ ] HVIRTUAL, HABSTRACT, and other types
 - [ ] Hook a function by name
 - [ ] Better HENUM support
 - [ ] Subclass an HL object from Python, or define a Python class and make it available as an HL Obj
   - [ ] Types and intellisense for HL Objs?
+- [ ] Stub generation and editor ergonomics
+- [ ] Runtime lifecycle and documentation
+- [ ] Better automated fixture coverage for hooks, closures, statics, and generated stubs
+- [ ] Cleaner extension points for game-specific base mods and helper libraries
+- [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
 - [ ] Common base lib mods for specific games and libs:
   - [ ] Heaps.IO base
     - [ ] Bundled PAK loading

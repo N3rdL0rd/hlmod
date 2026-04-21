@@ -30,10 +30,7 @@ def thing(self: Hook, val: float, val2: Optional[float], msg: str, val3: Optiona
     val = 2.0
     val2 = 1.0
     msg = "Hello, hlmod world!"
-    assert val3 is not None
-    val3.do_a_thing()
-    print(val3.test)
-    #print(SuperTestClass.STATIC_VAL)
+    print(SuperTestClass.STATIC_VAL)
     # s_supertestclass: S_SuperTestClass = get_global(23)
     # print(s_supertestclass)
     # print(s_supertestclass.STATIC_VAL)

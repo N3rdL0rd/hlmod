@@ -21,7 +21,61 @@ def hltype(idx: int) -> Callable[[Type[T]], Type[T]]:
         
     return decorator
 
-class HlObject:
+class HlObjectMeta(type):
+    """
+    Metaclass that forwards class-level access to a type's HL static object when one exists.
+    """
+
+    def _hlmod_get_static(cls) -> Any:
+        try:
+            tindex = type.__getattribute__(cls, "_hl_static_tindex")
+        except AttributeError as exc:
+            raise AttributeError(f"type object '{cls.__name__}' has no attribute 'STATIC'") from exc
+
+        if tindex is None:
+            raise AttributeError(f"type object '{cls.__name__}' has no static HL companion")
+
+        cached = type.__getattribute__(cls, "_hl_static_obj")
+        if cached is not None:
+            return cached
+
+        static_obj = hlmod.get_global(tindex)
+        if static_obj is None:
+            raise RuntimeError(f"HL static object for '{cls.__name__}' is unavailable")
+
+        type.__setattr__(cls, "_hl_static_obj", static_obj)
+        return static_obj
+
+    def __getattr__(cls, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(f"type object '{cls.__name__}' has no attribute '{name}'")
+
+        try:
+            static_obj = cls._hlmod_get_static()
+        except RuntimeError:
+            static_methods = type.__getattribute__(cls, "_hl_static_methods")
+            if name in static_methods:
+                return _HlStaticCallable(cls, name, static_methods[name])
+            raise
+        if name == "STATIC":
+            return static_obj
+        return getattr(static_obj, name)
+
+    def __setattr__(cls, name: str, value: Any) -> None:
+        if not name.startswith("_") and name != "STATIC":
+            try:
+                static_obj = cls._hlmod_get_static()
+            except (AttributeError, RuntimeError):
+                static_obj = None
+
+            if static_obj is not None and name in type(static_obj)._hl_fields:
+                setattr(static_obj, name, value)
+                return
+
+        super().__setattr__(name, value)
+
+
+class HlObject(metaclass=HlObjectMeta):
     """
     The base class for all generated Haxe object stubs.
     
@@ -32,6 +86,9 @@ class HlObject:
     
     _hl_fields: dict[str, int] = {}
     _hlmod_ptr: 'HlPtr'
+    _hl_static_tindex: int | None = None
+    _hl_static_obj: Any = None
+    _hl_static_methods: dict[str, int] = {}
 
     def __init__(self, ptr: 'HlPtr') -> None:
         """
@@ -82,6 +139,29 @@ class HlEnum(IntEnum):
 class HlEnumObject(HlObject):
     """Base class for HL enum constructors that have parameters."""
     pass
+
+
+class _HlStaticCallable:
+    """
+    Fallback wrapper for static methods before their companion global is materialized.
+    """
+
+    def __init__(self, owner: type[HlObject], name: str, findex: int | str) -> None:
+        self._owner = owner
+        self._name = name
+        self._findex = findex
+
+    def _hlmod_resolve_findex(self) -> int:
+        if isinstance(self._findex, str):
+            self._findex = hlmod.findex_for_name(self._findex)
+        return self._findex
+
+    def __call__(self, *args: Any) -> Any:
+        return hlmod.call(self._hlmod_resolve_findex(), args)
+
+    def __repr__(self) -> str:
+        target = self._findex if isinstance(self._findex, str) else f"f@{self._findex}"
+        return f"<static {self._owner.__name__}.{self._name} {target}>"
 
 class HlCallable:
     """
