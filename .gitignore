@@ -25,3 +25,4 @@ hlmod*.log
 installer/test/
 .codex
 .vscode/settings.json
+.claude/

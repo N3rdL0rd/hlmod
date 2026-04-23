@@ -4,7 +4,7 @@ MOD_INFO = {
     "description": "",
     "version": "0.0.1",
     "dependencies": ["modcore"],
-    "enabled": True
+    "enabled": False
 }
 
 from modcore import hook
