@@ -4,7 +4,7 @@ MOD_INFO = {
     "description": "Core utilities for modding Dead Cells.",
     "version": "0.0.1",
     "dependencies": ["modcore"],
-    "enabled": False
+    "enabled": True
 }
 
 from hlmod import assert_code_sha

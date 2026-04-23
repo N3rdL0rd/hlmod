@@ -70,6 +70,7 @@ def hook_h2d_Object_set_visible(self: Hook, this: H2DObject, val: bool):
     if globals.HIDE_CONTROLLER_WARNING:
         if padWarning is None:
             return self.call_original(this, val)
+        # TODO: fix this lazy bullshit since it's adding overhead to EVERY SINGLE CALL OF THIS FUNCTION
         if this._hlmod_ptr.ptr == padWarning._hlmod_ptr.ptr: # HACK: lazy but it works
             val = False
     return self.call_original(this, val)
