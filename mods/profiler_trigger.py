@@ -18,16 +18,16 @@ MOD_INFO = {
     "description": "Starts/stops the HL sampling profiler around a specific function call window.",
     "version": "0.0.1",
     "dependencies": ["modcore"],
-    "enabled": True,
+    "enabled": False,
 }
 
 import hlmod
 from modcore import hook
 
 # --- Configuration ---
-TRIGGER_FUNC   = "module.Class.method"    # function that starts the profiling window
+TRIGGER_FUNC    = "tool.weap.NunchuckPan.dynOnAttackAnim"
 SAMPLES_PER_SEC = 5000                    # higher = finer resolution, more overhead
-CALLS_TO_RECORD = 1                       # stop after this many entries of TRIGGER_FUNC
+CALLS_TO_RECORD = 3                       # capture 3 consecutive attacks to average out variance
 # ---------------------
 
 _call_count = 0

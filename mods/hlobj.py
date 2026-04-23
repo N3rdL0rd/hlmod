@@ -130,7 +130,66 @@ class HlObject(metaclass=HlObjectMeta):
 
     def _hlmod_call_findex(self, findex: int, *args: Any) -> Any:
         return hlmod.call(findex, (self, *args))
-        
+
+
+class HlVirtual:
+    """
+    Base class for HashLink virtual interface values.
+
+    Concrete generated virtual stubs register with `@hltype(...)` the same way
+    object stubs do. When no specific stub has been imported yet, hlmod falls
+    back to this generic wrapper and resolves field names lazily from the
+    underlying virtual metadata.
+    """
+
+    _hl_fields: dict[str, int] = {}
+    _hlmod_ptr: 'HlPtr'
+
+    def __init__(self, ptr: 'HlPtr') -> None:
+        object.__setattr__(self, "_hlmod_ptr", ptr)
+        object.__setattr__(self, "_hl_dynamic_fields", None)
+
+    def _hlmod_field_map(self) -> dict[str, int]:
+        if type(self) is not HlVirtual:
+            return type(self)._hl_fields
+
+        cached = object.__getattribute__(self, "_hl_dynamic_fields")
+        if cached is not None:
+            return cached
+
+        fields: dict[str, int] = {}
+        count = hlmod.get_virtual_field_count(self._hlmod_ptr)
+        for index in range(count):
+            fields[hlmod.get_virtual_field_name(self._hlmod_ptr, index)] = index
+        object.__setattr__(self, "_hl_dynamic_fields", fields)
+        return fields
+
+    def __getattr__(self, name: str) -> Any:
+        field_index = self._hlmod_field_map().get(name)
+        if field_index is not None:
+            return hlmod.get_virtual_field(self._hlmod_ptr, field_index)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        field_index = self._hlmod_field_map().get(name)
+        if field_index is not None:
+            hlmod.set_virtual_field(self._hlmod_ptr, field_index, value)
+        else:
+            object.__setattr__(self, name, value)
+
+    def fields(self) -> tuple[str, ...]:
+        return tuple(self._hlmod_field_map().keys())
+
+    def items(self) -> list[tuple[str, Any]]:
+        return [(name, getattr(self, name)) for name in self.fields()]
+
+    def to_dict(self) -> dict[str, Any]:
+        return dict(self.items())
+
+    def __repr__(self) -> str:
+        ptr_val = self._hlmod_ptr.ptr if self._hlmod_ptr else 0
+        return f"<{self.__class__.__name__} pointing to 0x{ptr_val:X}>"
+
 
 class HlEnum(IntEnum):
     """Base class for HL enums that have no parameters."""

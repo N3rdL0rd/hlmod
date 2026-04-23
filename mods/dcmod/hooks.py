@@ -1,6 +1,7 @@
 
 from typing import Any, Callable, Optional
 from hlmod import Hook
+from hlobj import HlVirtual
 from modcore import hook
 from stubs import ui
 from stubs import h2d
@@ -74,3 +75,8 @@ def hook_h2d_Object_set_visible(self: Hook, this: H2DObject, val: bool):
         if this._hlmod_ptr.ptr == padWarning._hlmod_ptr.ptr: # HACK: lazy but it works
             val = False
     return self.call_original(this, val)
+
+# @hook("tool.weap.NunchuckPan.dynOnAttackAnim")
+# def hook_nunchaku_dynOnAttackAnim(self: Hook, this, skill, virt: HlVirtual):
+#     log(str(virt.to_dict()))
+#     return self.call_original(this, skill, virt)

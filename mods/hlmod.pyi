@@ -84,6 +84,30 @@ def set_obj_field(obj: HlPtr, field: int, value: Any) -> None:
     Sets a field in an Obj* by index.
     """
     ...
+
+def get_virtual_field(obj: HlPtr, field: int) -> Any:
+    """
+    Gets a field from a Virtual* by index.
+    """
+    ...
+
+def set_virtual_field(obj: HlPtr, field: int, value: Any) -> None:
+    """
+    Sets a field in a Virtual* by index.
+    """
+    ...
+
+def get_virtual_field_count(obj: HlPtr) -> int:
+    """
+    Gets the number of fields exposed by a Virtual*.
+    """
+    ...
+
+def get_virtual_field_name(obj: HlPtr, field: int) -> str:
+    """
+    Gets the field name for a Virtual* field index.
+    """
+    ...
     
 def get_fixed_prng() -> bool:
     """
