@@ -140,4 +140,19 @@ def call_closure(vclosure: HlPtr, args: Tuple[Any,...]) -> Any:
     """
     ...
 
+def profile_start(sample_count: int = 1000) -> None:
+    """
+    Starts the HL sampling profiler at sample_count samples/sec.
+    Call profile_end() to stop and write hlprofile.dump.
+    Safe to call from inside a hook callback.
+    """
+    ...
+
+def profile_end() -> None:
+    """
+    Stops the profiler and writes hlprofile.dump to the working directory.
+    The dump can be converted to a Chrome-readable flamegraph JSON with ProfileGen.hx.
+    """
+    ...
+
 version: str
