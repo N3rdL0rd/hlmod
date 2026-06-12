@@ -52,7 +52,7 @@ hlsteam-common:
 
 hlsteam:
     @just hlsteam-common
-    cd hlsteam && make
+    cd hlsteam && make HASHLINK_SRC=../hlmod-hl
     cp hlsteam/steam.hdll hlmod-hl/build/bin/steam.hdll
     cp ./Steamworks-SDK/redistributable_bin/linux64/libsteam_api.so hlmod-hl/build/bin/libsteam_api.so
 
