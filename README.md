@@ -40,6 +40,9 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 - [x] Stub generation and editor ergonomics
 - [x] Runtime lifecycle and documentation
 - [x] Custom Haxe fixture coverage for hooks, closures, statics, subclasses, GC, and generated proxies
+- [x] Harmony-style prefix/postfix patches sharing the same hook chain as `hook()`
+- [x] Hook `@:hlNative` functions via an x86-64 inline detour, not just JIT-compiled bytecode
+- [x] Global TOML-backed configuration (`modcore.config`), one section per mod
 - [ ] Cleaner extension points for game-specific base mods and helper libraries
 - [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
 - [ ] Common base lib mods for specific games and libs:
@@ -226,6 +229,63 @@ still run; `BaseException` propagates.
 replaces Python state, but native objects that are still alive keep the class
 and closures they were created with; hlmod never frees them early.
 
+### Harmony-style patches
+
+`modcore.prefix_hook`/`postfix_hook`/`patch` install ordinary entries on the
+same per-findex chain `hook()` uses, so plain hooks and patches on one target
+interleave by priority:
+
+```python
+from modcore import patch, postfix_hook, prefix_hook
+
+@prefix_hook(Weapon.create, priority=10)
+def reject_locked(hero, item):
+    if not hero.hasUnlocked(item):
+        return False  # skip the original and every lower-priority hook/patch
+
+@postfix_hook(Weapon.create, priority=0)
+def log_result(result, hero, item):
+    log(f"created {result}")
+
+@patch(Weapon.create, priority=5)
+class DoubleDamage:
+    @staticmethod
+    def postfix(result, hero, item):
+        result.damage *= 2
+```
+
+A prefix returning `False` skips the rest of the chain for its own link
+(neither lower-priority entries nor the original run); returning a tuple
+replaces the positional arguments seen downstream; `None` continues
+unchanged. A postfix's non-`None` return replaces the result. This composes
+strictly (each patch wraps the *rest of the chain*, not an independent flat
+list), which is narrower than C# Harmony's model but shares its ergonomics
+and its one-hook-chain-per-target guarantee with DCCM's HarmonyX bridge.
+
+### Hooking native functions
+
+`hook()`/`register_hook()` also accept the findex of an `@:hlNative`
+function, resolved with `hlmod.native_findex(lib, name)`:
+
+```python
+from modcore import hook
+import hlmod
+
+@hook(hlmod.native_findex("std", "sys_time"))
+def frozen_clock(context):
+    return 0.0
+```
+
+Bytecode functions are hookable because their JIT-compiled bodies carry an
+injected check; natives are raw C pointers with no such body, and every
+caller bakes their address in as a constant at JIT-compile time. The first
+hook on a native lazily installs a small x86-64 inline detour at its entry
+point instead, so `call_next`/`call_original` and hook composition behave
+identically either way. Installing the detour requires hlmod to recognize a
+safely-overwritable instruction sequence at the native's entry; if it can't,
+hooking raises `RuntimeError` rather than guessing at an instruction
+boundary. x86-64 only, matching hlmod's supported JIT targets.
+
 ### Editor support
 
 Generated proxies ship with `.pyi` interfaces, so a type checker infers
@@ -312,6 +372,28 @@ cannot be intercepted after compilation.
   a bound receiver. Native fields/static globals still follow HL initialization:
   import-time static reads may expose default values before Haxe initialization.
 
+## Global configuration
+
+`modcore.config` stores mod settings in one `hlmod.toml` file, one table per
+mod, deliberately not JSON:
+
+```python
+from modcore import config
+
+settings = config.section(defaults={"volume": 5, "show_hud": True})
+settings["volume"] = 8   # marks the file dirty
+```
+
+`section()` defaults to the currently-loading mod's id and fills in any key
+missing from the file (so a fresh install always ends up with a complete,
+saved config), without touching keys a user already changed. The file is
+written automatically when mods shut down, or immediately via
+`config.save()`. `tomllib` (stdlib since Python 3.11) reads the file back;
+since it's read-only, hlmod ships a small writer (`modcore._toml_writer`)
+covering the value shapes a config file actually needs - bool, int, float,
+str, list, and nested tables - rather than pull in a third-party TOML
+dependency for round-tripping plain data.
+
 ## Design Philosophy
 
 - Modify the JIT compiler as LITTLE as possible. The more assembly we generate, the more unstable the VM becomes. Keep your ASM short, and write trampolines to C instead of full routines.
@@ -322,6 +404,11 @@ cannot be intercepted after compilation.
 
 - Anything that depends on older versions of HL's DirectX APIs will crash and sometimes even segfault.
   - Dead Cells provides an OpenGL-only executable, use that if possible.
+- Native hooking is x86-64 only and requires hlmod to recognize a safely
+  overwritable instruction sequence at the target's entry point; a native
+  compiled with an unrecognized prologue raises `RuntimeError` instead of
+  installing a hook. This is a deliberate fail-closed limit, not a bug: see
+  "Hooking native functions" above.
 
 ## What's Changed?
 
