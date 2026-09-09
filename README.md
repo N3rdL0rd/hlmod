@@ -43,13 +43,18 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 - [x] Harmony-style prefix/postfix patches sharing the same hook chain as `hook()`
 - [x] Hook `@:hlNative` functions via an x86-64 inline detour, not just JIT-compiled bytecode
 - [x] Global TOML-backed configuration (`modcore.config`), one section per mod
+- [ ] File-watcher hot-reload (automatic mod reload on file save without game restart)
+- [ ] TCP / socket REPL for interactive live inspection and runtime testing
+- [ ] Deep crashlink integration: realtime bytecode poking and mid-function opcode patching
 - [ ] Cleaner extension points for game-specific base mods and helper libraries
 - [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
-- [ ] Common base lib mods for specific games and libs:
-  - [ ] Heaps.IO base
-    - [ ] Bundled PAK loading
-    - [ ] Dead Cells
-      - [ ] Custom weapon subsystem
+- [ ] Generic Heaps.IO base library (`heapsmod`) across all Shiro / Motion Twin games:
+  - [ ] Virtual filesystem PAK mounting (`hxd.fs`)
+  - [ ] CastleDB table inspection, diffing and runtime patching
+  - [ ] Generic `hxbit` save-game serialization hooks
+- [ ] Game-specific base libraries:
+  - [ ] Dead Cells (`dcmod`)
+    - [ ] Custom weapon subsystem
 
 ## Installation
 
