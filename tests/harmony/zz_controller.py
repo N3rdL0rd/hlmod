@@ -33,9 +33,19 @@ def _check_prologue_decoder() -> None:
     assert len(real_bug_prologue) == 14, "sanity: matches HLMOD_JUMP_SIZE"
     assert decode(real_bug_prologue) == 14, "sub rsp + two xmm spills, exact HLMOD_JUMP_SIZE"
 
+    # Regression: a `call rel32` always returns to the very next byte, so
+    # it's safe to relocate (fix up its displacement) and keep scanning past
+    # it - unlike every other control-flow instruction here. Without this,
+    # short leaf natives that call straight out (e.g. Clang's compact
+    # `hl_sys_time`: sub rsp,0x18; lea rdi,[rsp+8]; xor esi,esi; call
+    # gettimeofday) have no 14-byte call-free run and can never be hooked.
+    clang_sys_time_prologue = b"\x48\x83\xec\x18\x48\x8d\x7c\x24\x08\x31\xf6\xe8\x00\x00\x00\x00"
+    assert decode(clang_sys_time_prologue) == len(clang_sys_time_prologue), "sub rsp + lea + xor + relocatable call"
+
     # Unrecognized or control-flow instructions must still be refused, not guessed at.
     assert decode(b"\xd8\x00", min_len=1) == -1, "unrecognized x87 opcode"
     assert decode(b"\xc3", min_len=4) == -1, "ret reached before min_len"
+    assert decode(b"\xe9\x00\x00\x00\x00", min_len=5) == -1, "unconditional jmp rel32 is never relocated"
 
     print("NATIVE_HOOK_DECODER_OK", flush=True)
 
