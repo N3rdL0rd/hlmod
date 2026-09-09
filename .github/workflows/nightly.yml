@@ -45,10 +45,10 @@ jobs:
             build_type: Release
             compiler: msvc
             python: '3.13'
-          # - os: windows-latest
-          #   build_type: Release
-          #   compiler: mingw
-          #   python: '3.13'
+          - os: windows-latest
+            build_type: Release
+            compiler: mingw
+            python: '3.13'
 
     steps:
     - name: Checkout repository
@@ -165,6 +165,12 @@ jobs:
       shell: msys2 {0}
       run: cmake --build hlmod-hl/build --parallel
 
+    - name: Copy MinGW runtime DLLs
+      if: runner.os == 'Windows' && matrix.compiler == 'mingw'
+      shell: msys2 {0}
+      run: |
+          cp /mingw64/bin/libgcc_s_seh-1.dll /mingw64/bin/libstdc++-6.dll /mingw64/bin/libwinpthread-1.dll hlmod-hl/build/bin/
+
     - name: Run test suites (Linux)
       if: runner.os == 'Linux'
       run: |
@@ -176,6 +182,15 @@ jobs:
 
     - name: Run test suites (Windows/MSVC)
       if: runner.os == 'Windows' && matrix.compiler == 'msvc'
+      run: |
+          python -m unittest discover -s tests/framework -v
+          python tests/bridge/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
+
+    - name: Run test suites (Windows/MinGW)
+      if: runner.os == 'Windows' && matrix.compiler == 'mingw'
       run: |
           python -m unittest discover -s tests/framework -v
           python tests/bridge/run.py --hl hlmod-hl/build/bin/hl.exe
