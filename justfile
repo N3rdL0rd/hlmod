@@ -37,7 +37,7 @@ run-win:
     hlmod-hl\build\bin\hl.exe PatchMe.hl
 
 # Isolated custom Haxe fixtures; never loads mods from the working directory.
-test: test-framework test-bridge test-value test-events
+test: test-framework test-bridge test-value test-events test-harmony
 
 test-bridge:
     python3 tests/bridge/run.py
@@ -47,6 +47,9 @@ test-value:
 
 test-events:
     python3 tests/events/run.py
+
+test-harmony:
+    python3 tests/harmony/run.py
 
 test-framework:
     python3 -m unittest discover -s tests/framework
