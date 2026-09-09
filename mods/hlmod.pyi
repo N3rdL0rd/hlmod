@@ -183,6 +183,17 @@ def findex_for_name(name: str) -> int:
     """
     ...
 
+def native_findex(lib: str, name: str) -> int:
+    """
+    Gets the findex of an `@:hlNative(lib, name)` function declared in the loaded bytecode.
+    Pass the result straight to `modcore.hook()`/`register_hook()`; hooking a native lazily
+    installs a low-level x86-64 detour the first time it is hooked, so composition,
+    `call_next`, and `call_original` behave identically to hooking a bytecode function.
+    Raises `KeyError` if no such native exists, and `RuntimeError` if hlmod cannot find a
+    safely overwritable prologue at the native's entry point (x86-64 only).
+    """
+    ...
+
 def call_closure(vclosure: HlPtr, args: Tuple[Any,...]) -> Any:
     """
     Calls a closure by its pointer with the given arguments.
