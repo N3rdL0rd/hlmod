@@ -16,4 +16,4 @@ def initialize():
 if os.environ.get("HLMOD_BENCH_HOOK"):
     @hook("$Benchmark.work")
     def _hook_work(h, x: int) -> int:
-        return h.call_original(x)
+        return h.call_next(x)

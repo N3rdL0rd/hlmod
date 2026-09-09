@@ -36,6 +36,28 @@ run-win:
     #!cmd.exe /C
     hlmod-hl\build\bin\hl.exe PatchMe.hl
 
+# Isolated custom Haxe fixtures; never loads mods from the working directory.
+test: test-framework test-bridge test-value test-events
+
+test-bridge:
+    python3 tests/bridge/run.py
+
+test-value:
+    python3 tests/value/run.py
+
+test-events:
+    python3 tests/events/run.py
+
+test-framework:
+    python3 -m unittest discover -s tests/framework
+
+# Requires a Pyright binary, for example: uvx --from pyright which pyright
+test-editor pyright="pyright":
+    python3 tests/editor/run.py --pyright {{pyright}}
+
+bench:
+    python3 tests/performance/run.py
+
 hlsteam-common:
     mkdir -p hlsteam/native/include/steam
     mkdir -p hlsteam/native/lib/win32

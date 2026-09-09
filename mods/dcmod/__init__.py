@@ -8,7 +8,7 @@ MOD_INFO = {
 }
 
 from hlmod import assert_code_sha
-from . import hooks
+from . import events, hooks
 from .util import *
 
 def initialize() -> None:

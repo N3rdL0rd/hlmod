@@ -48,7 +48,7 @@ def _profiler_trigger(h, *args):
         hlmod.profile_start(SAMPLES_PER_SEC)
         print(f"[profiler] started ({SAMPLES_PER_SEC} samples/s)")
 
-    result = h.call_original(*args)
+    result = h.call_next(*args)
 
     _call_count += 1
     if _call_count >= CALLS_TO_RECORD:

@@ -7,8 +7,7 @@ MOD_INFO = {
     "enabled": False
 }
 
-from modcore import hook
-from hlmod import get_obj_field, Hook, assert_code_sha, get_global
+from modcore import HookContext, hook
 from typing import Optional
 from stubs import TestClass, SuperTestClass
 
@@ -20,12 +19,12 @@ def initialize():
     pass
 
 @hook("TestClass.do_a_thing")
-def hook_do_a_thing(self: Hook, this: TestClass):
-    self.call_original(this)
+def hook_do_a_thing(self: HookContext[[TestClass], None], this: TestClass) -> None:
+    self.call_next(this)
     print("Hooked do a thing!!")
 
 @hook("$PatchMe.thing")
-def thing(self: Hook, val: float, val2: Optional[float], msg: str, val3: Optional[TestClass]):
+def thing(self: HookContext[[float, Optional[float], str, Optional[TestClass]], None], val: float, val2: Optional[float], msg: str, val3: Optional[TestClass]) -> None:
     print("Hook!")
     val = 2.0
     val2 = 1.0
@@ -34,15 +33,15 @@ def thing(self: Hook, val: float, val2: Optional[float], msg: str, val3: Optiona
     # s_supertestclass: S_SuperTestClass = get_global(23)
     # print(s_supertestclass)
     # print(s_supertestclass.STATIC_VAL)
-    self.call_original(val, 2.0, msg, val3)
+    self.call_next(val, 2.0, msg, val3)
 
 @hook("$PatchMe.main")
-def hook_main(self: Hook):
-    self.call_original()
+def hook_main(self: HookContext[[], None]) -> None:
+    self.call_next()
     print("Called and hooked main!!")
     
 @hook("$PatchMe.closure_test_2")
-def closure_test_2(self: Hook, closure):
+def closure_test_2(self: HookContext, closure) -> None:
     print(closure)
     closure()
-    self.call_original(closure)
+    self.call_next(closure)
