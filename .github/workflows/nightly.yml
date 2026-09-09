@@ -119,10 +119,14 @@ jobs:
 
     - uses: krdlab/setup-haxe@v2
       with:
-        haxe-version: latest
+        haxe-version: 4.3.7
 
     - name: Install HL haxelib
-      run: haxelib install hashlink
+      # Pinned: "latest" tracks Haxe's dev nightly std lib, which can assume
+      # HL natives (e.g. bsort_i64) this repo's vendored HL C runtime
+      # doesn't implement yet. 1.15.0 is verified against the current
+      # HL_VERSION (see hl.h) by the local test suite.
+      run: haxelib install hashlink 1.15.0
 
     - name: Configure CMake (Linux)
       if: runner.os == 'Linux'
