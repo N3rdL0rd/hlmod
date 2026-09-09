@@ -4,6 +4,7 @@ from importlib import import_module
 from pathlib import Path
 
 from ._events import Event, mods_loaded, shutting_down
+from ._harmony import patch, postfix_hook, prefix_hook
 from ._hooks import HookContext, hook, register_hook
 from ._lifecycle import (
     Mod,
@@ -28,7 +29,8 @@ MOD_INFO = {
 __all__ = [
     "Event", "HookContext", "Mod", "ModError", "Registration", "current_mod",
     "finish_loading", "hook", "load_all_stubs", "load_mod", "mods_loaded",
-    "register_hook", "reload_mod", "shutdown", "shutting_down", "unload_mod",
+    "patch", "postfix_hook", "prefix_hook", "register_hook", "reload_mod",
+    "shutdown", "shutting_down", "unload_mod",
 ]
 
 
