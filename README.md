@@ -23,24 +23,23 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 
 ## Roadmap
 
-> [!NOTE]
-> Public stubs can now expose static methods and companion-backed members cleanly, but static data fields still depend on the backing HL static object existing at runtime. Access during early mod import is still a lifecycle gap that needs a proper runtime contract or fallback.
-
 - [x] Basic Python mods as modules, resolve dependencies, mod metadata
 - [x] JIT hooking to Python
 - [x] Basic casting of primitives from HL -> Python and Python -> HL
 - [x] HNULL casting support
 - [x] Obj wrappers, metaclasses and Python interfaces for HL objects
-- [ ] Static Obj support and global instance support
-  - [ ] Close the import-time lifecycle gap for static data fields
-- [ ] HVIRTUAL, HABSTRACT, and other types
-- [ ] Hook a function by name
-- [ ] Better HENUM support
-- [ ] Subclass an HL object from Python, or define a Python class and make it available as an HL Obj
-  - [ ] Types and intellisense for HL Objs?
-- [ ] Stub generation and editor ergonomics
-- [ ] Runtime lifecycle and documentation
-- [ ] Better automated fixture coverage for hooks, closures, statics, and generated stubs
+- [x] Static Obj support and global instance support
+  - [x] Close the import-time lifecycle gap for static data fields
+- [x] HVIRTUAL data and callable-field proxies
+- [x] HENUM, HDYNOBJ and HREF wrappers plus native inspection
+- [x] HBYTES buffers bounded by their real allocation (abstracts stay opaque by design)
+- [x] Hook a function by name
+- [x] Composable hooks, mod ownership, lifecycle and reload
+- [x] Game-core event objects with large-scale broadcast dispatch
+- [x] Subclass an HL object from Python with native dispatch and round-trip identity
+- [x] Stub generation and editor ergonomics
+- [x] Runtime lifecycle and documentation
+- [x] Custom Haxe fixture coverage for hooks, closures, statics, subclasses, GC, and generated proxies
 - [ ] Cleaner extension points for game-specific base mods and helper libraries
 - [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
 - [ ] Common base lib mods for specific games and libs:
@@ -140,8 +139,178 @@ cd ..
 
 Then, binaries will be at `hlmod-hl/build/bin`, as normal.
 
+The mod resolver and proxy renderer live in `hlmod-hl/python/`, not C string
+literals. CMake validates and embeds those Python sources into the executable;
+deployed builds do not need the source files. Editing either source regenerates
+the embedded header during the next build. Generated proxies are cached by both
+the generator signature and the loaded bytecode hash.
+
+### Verification
+
+```sh
+just build
+just test            # every suite below
+just test-bridge     # conversions, subclasses, GC ownership
+just test-value      # enums, dynamic objects, references, inspection
+just test-events      # core events, composed hooks, mod lifecycle
+just test-framework   # framework units, no HL runtime required
+just test-editor      # Pyright acceptance for the generated SDK
+just bench            # dispatch, collector and broadcast timings
+```
+
+Each runner compiles its own Haxe fixture in debug and release and runs it in a
+temporary directory containing only that fixture's mods. None of them load the
+repository's game mods or Dead Cells. Coverage includes native and Python
+inheritance, constructors, `super()`, virtual/direct/bound/dynamic calls,
+scalar and structural conversions, worker-thread callbacks, ownership across
+both collectors, hook composition across mods, unload/reload, and event
+broadcast to many subscribers.
+
+Measured on one machine (Linux, release bytecode) with `just bench`:
+unhooked native calls cost about 6.5 ns, a hooked call about 200 ns, and one
+million event deliveries about 0.54 s. Treat these as a local baseline, not a
+guarantee.
+
 > [!NOTE]
-> The `hl` JIT VM binary built from `hlmod-hl` expects there to be a directory `./mods` from the working dir, containing mods to be loaded! You should copy over `hlmod.pyi` and `modcore.py` from this repo's `mods/` directory as the base library for other mods to reference.
+> The `hl` JIT VM binary expects a `./mods` directory relative to its working directory. Distribute `mods/hlobj.py`, `mods/hlvalues.py`, the `mods/modcore/` package and the `.pyi` files with your mods. Proxies under `mods/stubs/` are generated for the loaded bytecode; do not copy them between applications. `hl --generate-stubs game.hl` writes the SDK without running the game.
+
+## Mods, hooks and events
+
+Every mod is a module or package with a literal `MOD_INFO`. The framework loads
+mods in dependency order, runs an optional `initialize()`, and owns everything a
+mod registers so unloading cannot leave stale callbacks behind.
+
+```python
+MOD_INFO = {"id": "my_mod", "dependencies": ["dcmod"]}
+
+from dcmod import events
+from modcore import HookContext, hook
+from stubs.pr import Game
+
+@events.game_update.listen(priority=10)
+def on_update(game: Game) -> None:
+    ...
+
+@hook(Game.update)
+def wrap_update(context: HookContext[[Game], None], game: Game) -> None:
+    context.call_next(game)   # run the remaining hooks, then the original
+```
+
+Hooks compose: several mods may hook the same function, highest priority first,
+then registration order. `call_next` continues the chain, `call_original`
+deliberately skips the rest of it. A hook that raises propagates a catchable HL
+exception with the Python traceback, the function index and the owning mod; the
+original never runs twice. `register_hook` returns a `Registration` that can be
+closed, and unloading a mod removes its hooks and subscriptions automatically.
+
+Game core libraries publish their own events, so other mods never need to know
+which native function produces them:
+
+```python
+# In a core library such as dcmod.
+from modcore import Event
+game_update: Event[[Game]] = Event("dcmod.game_update")
+
+@hook(Game.update)
+def publish(context: HookContext[[Game], None], game: Game) -> None:
+    context.call_next(game)
+    game_update.emit(game)
+```
+
+`emit` dispatches over the snapshot taken when it starts, so subscribing or
+unsubscribing during a dispatch takes effect on the next one. A subscriber that
+raises `Exception` is logged with its owning mod and the remaining subscribers
+still run; `BaseException` propagates.
+
+`load_mod`, `unload_mod` and `reload_mod` manage mods at runtime. Reloading
+replaces Python state, but native objects that are still alive keep the class
+and closures they were created with; hlmod never frees them early.
+
+### Editor support
+
+Generated proxies ship with `.pyi` interfaces, so a type checker infers
+`BridgeBase(1)` as `BridgeBase`, checks constructor and method arguments, field
+types, overrides, hook signatures and event payloads. Point your editor at the
+`mods` directory. Where the bytecode has erased detail, such as native array
+element types, `mods/typing_overlays.json` supplies annotations that apply only
+to the generated interfaces:
+
+```json
+{"version": 1,
+ "imports": {"NativeArray": "hlobj.HlArray"},
+ "types": {"pr.Game": {"fields": {"players": "NativeArray[int] | None"}}}}
+```
+
+## Python subclasses and native values
+
+Generated object classes can be constructed and subclassed normally:
+
+```python
+from stubs import BridgeBase
+
+class Offset(BridgeBase):
+    def __init__(self, value: int):
+        super().__init__(value)  # Runs the native constructor on this instance.
+        self.offset = 100       # Python-only state.
+
+    def compute(self, delta: int) -> int:
+        return super().compute(delta) + self.offset
+
+obj = Offset(10)
+obj.value = 20                  # Writes the inherited native field.
+```
+
+Passing `obj` to a compatible HL parameter passes a real native subtype. HL method
+calls reach its Python overrides; returning it through a base-class or `Dynamic`
+value recovers the original Python instance, including Python-only state. Native
+instances of the base class are unaffected. Wrapping an existing native object
+does not run Python `__init__`. Ordinary Python mixins are supported, but multiple
+native bases are rejected.
+
+Native fields keep their HL layout and types. New Python attributes are not new
+HL fields; class defaults/properties that shadow native data fields are rejected.
+Native dynamic-method fields are live: assigning a compatible Python callable
+changes subsequent calls from both languages. Explicit base calls and `super()`
+still execute the selected base implementation. Calls already inlined by Haxe
+cannot be intercepted after compilation.
+
+### Conversion and ownership rules
+
+- Native object, virtual, closure, and array wrappers carry their actual HL type
+  and keep their native allocations alive. HL-held Python objects and callbacks
+  retain their Python state; unreachable cross-runtime cycles are collected.
+- `None` represents null pointer/nullable values, not scalar zero. Pointer-value
+  annotations include `None`, since bytecode does not retain non-null guarantees.
+- Integers are range-checked, including signed 64-bit values. `Bool` requires a
+  Python `bool`. Strings preserve UTF-16 contents, embedded NULs, and leading BOM
+  characters. Incompatible object and closure types raise `TypeError`.
+- `HlArray` is a live native-array proxy, not a copied Python list. Its indexing
+  reads/writes native storage; `HlArray.create(type_index, values)` creates
+  an array with an explicit element type. Plain lists are not implicitly cast to
+  HL native arrays: an `HARRAY` signature does not encode its element type.
+- Python callables become typed HL closures when the receiving signature is
+  known. Ambiguous `Dynamic` callbacks need an explicit signature through
+  `hlmod.make_callback`. Python callback exceptions become catchable HL exceptions;
+  HL exceptions in calls from Python become `RuntimeError`.
+- Raw `HlPtr(address, kind)` values are opaque and untrusted. Integer addresses
+  and untrusted pointers cannot be used as typed objects, arrays, or closures.
+- `HlEnum`, `HlDynObject`, `HlRef[T]` and `HlBytes` wrap native enums, dynamic
+  records, references and byte buffers; `inspect_native` reports real runtime
+  fields, methods and enum constructors. Abstracts stay opaque `HlPtr` values by
+  design. Packed/GUID values and unsupported struct/callback layouts raise
+  explicit errors rather than guessing memory layout.
+- Enum values compare structurally, like `Type.enumEq`: HL shares pointers only
+  for compiler-created constants. Constructor *parameter names* are absent from
+  bytecode, so parameters are positional.
+- `HlBytes` bounds every read and write by the buffer's real allocation. HL
+  bytes carry no length, so a wrapper knows its length only when Python
+  allocated it, otherwise it reports the allocation size; buffers HL never
+  allocated have no discoverable size and stay unreadable. Passing `bytes`
+  where HL expects `hl.Bytes` copies into a GC-owned buffer, so pass `HlBytes`
+  when both sides must share storage.
+- Calls through HL's dynamic dispatcher accept at most nine arguments, counting
+  a bound receiver. Native fields/static globals still follow HL initialization:
+  import-time static reads may expose default values before Haxe initialization.
 
 ## Design Philosophy
 
