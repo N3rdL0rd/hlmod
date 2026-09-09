@@ -23,6 +23,11 @@ files.txt
 *.dll
 hlmod*.log
 installer/test/
+hlboot
+hlboot.c
+hlboot.build.sh
+hlboot_dbg
+hlboot_timed
 .codex
 .vscode/settings.json
 .claude/
