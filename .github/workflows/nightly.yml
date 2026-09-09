@@ -227,8 +227,10 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         ARTIFACT_DIR=hlmod-hl/build/bin
+        LIB_DIR="$ARTIFACT_DIR/lib"
 
         cp -r mods/ $ARTIFACT_DIR/mods/
+        mkdir -p "$LIB_DIR"
 
         LIBPYTHON_PATH=$(ldd $ARTIFACT_DIR/hl | grep libpython | awk '{print $3}')
         if [ ! -f "$LIBPYTHON_PATH" ]; then
@@ -236,11 +238,9 @@ jobs:
             exit 1
         fi
         echo "Found libpython at: $LIBPYTHON_PATH"
+        cp "$LIBPYTHON_PATH" "$LIB_DIR/"
 
-        cp "$LIBPYTHON_PATH" "$ARTIFACT_DIR/"
-        echo "Copied libpython to artifact directory."
-
-        cp /usr/lib/x86_64-linux-gnu/libmbed*.so* "$ARTIFACT_DIR/" || true
+        cp /usr/lib/x86_64-linux-gnu/libmbed*.so* "$LIB_DIR/" || true
 
         STDLIB_PATH=$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')
         if [ ! -d "$STDLIB_PATH" ]; then
@@ -248,21 +248,25 @@ jobs:
             exit 1
         fi
         echo "Found standard library at: $STDLIB_PATH"
+        # Install under lib/ so PYTHONHOME=$DIR resolves the standard prefix
+        # layout (lib/pythonX.Y + lib/pythonX.Y/lib-dynload), like a real install.
+        cp -r "$STDLIB_PATH" "$LIB_DIR/"
 
-        cp -r "$STDLIB_PATH" "$ARTIFACT_DIR/"
-        echo "Copied standard library to artifact directory."
-
-        patchelf --set-rpath '$ORIGIN' $ARTIFACT_DIR/hl
+        patchelf --set-rpath '$ORIGIN:$ORIGIN/lib' $ARTIFACT_DIR/hl
         echo "Set RPATH on hl."
 
         mv $ARTIFACT_DIR/hl $ARTIFACT_DIR/hl.bin
         cat << 'EOF' > $ARTIFACT_DIR/hl
         #!/bin/sh
         # This script sets up the environment for the real 'hl.bin' executable.
+        # Relocatable: resolve everything against this bundle, not the CWD or
+        # the build machine's absolute paths.
 
         DIR=$(cd "$(dirname "$0")" && pwd)
+        PY=$(echo "$DIR"/lib/python3.* | head -n1)
+        export LD_LIBRARY_PATH="$DIR:$DIR/lib:$LD_LIBRARY_PATH"
         export PYTHONHOME="$DIR"
-        export PYTHONPATH="$(find . -name python*)"
+        export PYTHONPATH="$PY:$PY/lib-dynload:$DIR/mods"
         exec "$DIR/hl.bin" "$@"
         EOF
         chmod 775 $ARTIFACT_DIR/hl
