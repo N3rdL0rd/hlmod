@@ -3,6 +3,7 @@
 from importlib import import_module
 from pathlib import Path
 
+from . import config
 from ._events import Event, mods_loaded, shutting_down
 from ._harmony import patch, postfix_hook, prefix_hook
 from ._hooks import HookContext, hook, register_hook
@@ -27,7 +28,7 @@ MOD_INFO = {
 }
 
 __all__ = [
-    "Event", "HookContext", "Mod", "ModError", "Registration", "current_mod",
+    "Event", "HookContext", "Mod", "ModError", "Registration", "config", "current_mod",
     "finish_loading", "hook", "load_all_stubs", "load_mod", "mods_loaded",
     "patch", "postfix_hook", "prefix_hook", "register_hook", "reload_mod",
     "shutdown", "shutting_down", "unload_mod",

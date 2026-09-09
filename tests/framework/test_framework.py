@@ -5,14 +5,16 @@ from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
 import textwrap
+import tomllib
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "mods"))
 
 from modcore import (
-    Event, ModError, Registration, current_mod, finish_loading, load_all_stubs,
+    Event, ModError, Registration, config, current_mod, finish_loading, load_all_stubs,
     load_mod, mods_loaded, reload_mod, shutdown, shutting_down, unload_mod,
 )
+from modcore._toml_writer import dumps as toml_dumps
 
 
 class EventTests(unittest.TestCase):
@@ -301,6 +303,71 @@ class StubLoadingTests(unittest.TestCase):
                 if name == "stubs" or name.startswith("stubs."):
                     sys.modules.pop(name)
             sys.modules.update(saved)
+
+
+class ConfigTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        config.set_path(Path(self.temporary.name) / "hlmod.toml")
+        self.addCleanup(config.set_path, Path("hlmod.toml"))
+
+    def test_section_requires_explicit_name_outside_a_mod(self):
+        self.assertIsNone(current_mod())
+        with self.assertRaises(RuntimeError):
+            config.section(defaults={"x": 1})
+
+    def test_defaults_fill_missing_keys_and_mark_dirty_exactly_once(self):
+        section = config.section("mymod", defaults={"volume": 5, "name": "hi"})
+        self.assertEqual(section["volume"], 5)
+        config.save()
+        self.assertTrue(config._path.exists())
+        raw = tomllib.loads(config._path.read_text(encoding="utf-8"))
+        self.assertEqual(raw, {"mymod": {"volume": 5, "name": "hi"}})
+
+        # Re-opening with the same defaults must not touch an explicitly-set value.
+        section["volume"] = 11
+        config.save()
+        reopened = config.section("mymod", defaults={"volume": 5, "name": "hi"})
+        self.assertEqual(reopened["volume"], 11)
+
+    def test_sections_are_independent(self):
+        a = config.section("mod_a", defaults={"x": 1})
+        b = config.section("mod_b", defaults={"x": 2})
+        a["x"] = 100
+        self.assertEqual(b["x"], 2)
+        config.save()
+        raw = tomllib.loads(config._path.read_text(encoding="utf-8"))
+        self.assertEqual(raw, {"mod_a": {"x": 100}, "mod_b": {"x": 2}})
+
+    def test_save_is_a_no_op_without_changes(self):
+        config.section("mymod", defaults={"x": 1})
+        config.save()
+        first_write = config._path.read_text(encoding="utf-8")
+        config._path.write_text(first_write + "\n# tampered\n", encoding="utf-8")
+        config.save()  # nothing marked dirty since the first save; must not rewrite
+        self.assertEqual(config._path.read_text(encoding="utf-8"), first_write + "\n# tampered\n")
+
+    def test_shutting_down_event_autosaves(self):
+        config.section("mymod", defaults={"x": 1})
+        self.assertFalse(config._path.exists())
+        shutting_down.emit()
+        self.assertTrue(config._path.exists())
+
+    def test_toml_writer_round_trips_representable_value_shapes(self):
+        data = {
+            "mymod": {
+                "flag": True,
+                "count": -7,
+                "ratio": 0.5,
+                "text": 'has "quotes", a\ttab, and a\nnewline',
+                "bare-ish.key": 3,
+                "items": [1, 2, 3],
+                "nested": {"deep": {"value": "ok"}},
+            }
+        }
+        rendered = toml_dumps(data)
+        self.assertEqual(tomllib.loads(rendered), data)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from collections.abc import Callable, Sequence
 from types import ModuleType, TracebackType
 from typing import Any, Concatenate, Generic, ParamSpec, TypeVar, overload
 
+from . import config as config
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
