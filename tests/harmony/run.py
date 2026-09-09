@@ -39,7 +39,7 @@ def main() -> None:
             print(result.stdout, end="")
             if result.returncode:
                 raise SystemExit(f"Harmony fixture exited with status {result.returncode}")
-            for marker in ("HARMONY_FIXTURE_OK",):
+            for marker in ("NATIVE_HOOK_DECODER_OK", "HARMONY_FIXTURE_OK"):
                 if marker not in result.stdout:
                     raise SystemExit(f"Harmony fixture did not reach {marker}")
 

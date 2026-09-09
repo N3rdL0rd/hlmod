@@ -7,6 +7,41 @@ from stubs import Calculator, HarmonyFixture
 trace: list[str] = []
 
 
+def _check_prologue_decoder() -> None:
+    """Exercises the native-hook engine's x86-64 prologue decoder directly,
+    independent of whatever prologue the loaded bytecode's own natives
+    happen to have. In particular this pins the fix for a real bug: MSVC's
+    Windows x64 ABI treats XMM6-15 as callee-saved, so any native using them
+    spills via `movaps [rsp+N], xmmN` in its prologue - an encoding the
+    decoder didn't recognize until it broke hooking `std.sys_time` on
+    Windows (System V/Linux never needs this spill, since all XMM registers
+    are caller-saved there, which is why the bug was Windows-only)."""
+    pad = b"\x90" * 32  # NOP padding so the decoder never reads past our buffer
+
+    def decode(prologue: bytes, min_len: int | None = None) -> int:
+        return hlmod.native_hook_test_prologue(prologue + pad, len(prologue) if min_len is None else min_len)
+
+    assert decode(b"\xf3\x0f\x1e\xfa") == 4, "endbr64"
+    assert decode(b"\x55") == 1, "push rbp"
+    assert decode(b"\x48\x83\xec\x38") == 4, "sub rsp, 0x38"
+    assert decode(b"\x48\xb8" + b"\x00" * 8) == 10, "mov rax, imm64"
+    assert decode(b"\x0f\xb6\x01") == 3, "movzx eax, byte [rcx]"
+
+    movaps_xmm6 = b"\x0f\x29\x74\x24\x20"  # movaps [rsp+0x20], xmm6
+    assert decode(movaps_xmm6) == 5, "movaps [rsp+N], xmm6"
+    real_bug_prologue = b"\x48\x83\xec\x38" + movaps_xmm6 + b"\x0f\x29\x7c\x24\x30"
+    assert len(real_bug_prologue) == 14, "sanity: matches HLMOD_JUMP_SIZE"
+    assert decode(real_bug_prologue) == 14, "sub rsp + two xmm spills, exact HLMOD_JUMP_SIZE"
+
+    # Unrecognized or control-flow instructions must still be refused, not guessed at.
+    assert decode(b"\xd8\x00", min_len=1) == -1, "unrecognized x87 opcode"
+    assert decode(b"\xc3", min_len=4) == -1, "ret reached before min_len"
+
+    print("NATIVE_HOOK_DECODER_OK", flush=True)
+
+
+_check_prologue_decoder()
+
 # --- Prefix replacing positional arguments ---------------------------------
 
 @prefix_hook(Calculator.add, priority=10)
