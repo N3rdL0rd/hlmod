@@ -161,6 +161,24 @@ jobs:
       shell: msys2 {0}
       run: cmake --build hlmod-hl/build --parallel
 
+    - name: Run test suites (Linux)
+      if: runner.os == 'Linux'
+      run: |
+          python3 -m unittest discover -s tests/framework -v
+          python3 tests/bridge/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/value/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/events/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/harmony/run.py --hl hlmod-hl/build/bin/hl
+
+    - name: Run test suites (Windows/MSVC)
+      if: runner.os == 'Windows' && matrix.compiler == 'msvc'
+      run: |
+          python -m unittest discover -s tests/framework -v
+          python tests/bridge/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
+
     - name: Build hlsteam (Linux)
       if: runner.os == 'Linux'
       env:
