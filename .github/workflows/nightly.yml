@@ -179,6 +179,7 @@ jobs:
           python3 tests/value/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/events/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/harmony/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/devloop/run.py --hl hlmod-hl/build/bin/hl
 
     - name: Run test suites (Windows/MSVC)
       if: runner.os == 'Windows' && matrix.compiler == 'msvc'
@@ -188,6 +189,7 @@ jobs:
           python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/devloop/run.py --hl hlmod-hl/build/bin/hl.exe
 
     - name: Run test suites (Windows/MinGW)
       if: runner.os == 'Windows' && matrix.compiler == 'mingw'
@@ -197,6 +199,7 @@ jobs:
           python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/devloop/run.py --hl hlmod-hl/build/bin/hl.exe
 
     - name: Build hlsteam (Linux)
       if: runner.os == 'Linux'

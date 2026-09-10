@@ -36,8 +36,12 @@ run-win:
     #!cmd.exe /C
     hlmod-hl\build\bin\hl.exe PatchMe.hl
 
+# Dev loop: run `hl BYTECODE` and restart it whenever mods/*.py changes.
+dev bytecode="PatchMe.hl":
+    python3 tools/dev.py {{bytecode}}
+
 # Isolated custom Haxe fixtures; never loads mods from the working directory.
-test: test-framework test-bridge test-value test-events test-harmony
+test: test-framework test-bridge test-value test-events test-harmony test-devloop
 
 test-bridge:
     python3 tests/bridge/run.py
@@ -50,6 +54,9 @@ test-events:
 
 test-harmony:
     python3 tests/harmony/run.py
+
+test-devloop:
+    python3 tests/devloop/run.py
 
 test-framework:
     python3 -m unittest discover -s tests/framework

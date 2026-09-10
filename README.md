@@ -182,6 +182,21 @@ guarantee.
 > [!NOTE]
 > The `hl` JIT VM binary expects a `./mods` directory relative to its working directory. Distribute `mods/hlobj.py`, `mods/hlvalues.py`, the `mods/modcore/` package and the `.pyi` files with your mods. Proxies under `mods/stubs/` are generated for the loaded bytecode; do not copy them between applications. `hl --generate-stubs game.hl` writes the SDK without running the game.
 
+### Dev loop
+
+Mods are plain Python with no compile step, so the only friction in local
+iteration is noticing an edit and restarting `hl` by hand. `tools/dev.py`
+closes that gap:
+
+```sh
+just dev game.hl      # or: python3 tools/dev.py game.hl --hl path/to/hl
+```
+
+It launches `hl game.hl`, watches `mods/**/*.py` (excluding the generated
+`mods/stubs/` tree) plus `hlmod.toml`/`typing_overlays.json`, and restarts the
+process on any change. This is a local iteration tool, not packaging: it does
+not build anything and has no relation to the installer or the nightly build.
+
 ## Mods, hooks and events
 
 Every mod is a module or package with a literal `MOD_INFO`. The framework loads
