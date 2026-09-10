@@ -182,7 +182,9 @@ class BridgeFixture {
         python = null;
         dynamicValue = null;
         bound = null;
+        Sys.println("HLMOD_DEBUG before collect");
         collect();
+        Sys.println("HLMOD_DEBUG after collect");
         afterCollection();
         Sys.println("BRIDGE_FIXTURE_OK");
     }
