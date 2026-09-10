@@ -43,6 +43,40 @@ def main() -> None:
             for marker in ("EVENTS_LIFECYCLE_OK", "EVENTS_FIXTURE_OK"):
                 if marker not in result.stdout:
                     raise SystemExit(f"Events fixture did not reach {marker}")
+    _check_load_failure_banner(root, fixture, args)
+
+
+def _check_load_failure_banner(root, fixture, args) -> None:
+    """A mod that raises on import must abort startup with a clear banner
+    printed to stderr *before* the raw traceback, not buried after it."""
+    with tempfile.TemporaryDirectory(prefix="hlmod-events-loadfail-") as temporary:
+        work = Path(temporary)
+        mods = work / "mods"
+        mods.mkdir()
+        for name in ("hlobj.py", "hlvalues.py"):
+            shutil.copy2(root / "mods" / name, mods / name)
+        shutil.copytree(root / "mods/modcore", mods / "modcore", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copy2(fixture / "broken_mod.py", mods / "broken_mod.py")
+        bytecode = work / "EventsFixture.hl"
+        subprocess.run(
+            [args.haxe, "-cp", str(fixture), "-main", "EventsFixture", "-hl", str(bytecode)],
+            check=True, timeout=60,
+        )
+        result = subprocess.run(
+            [str(args.hl.resolve()), str(bytecode)], cwd=work,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            raise SystemExit("Load-failure fixture unexpectedly exited with status 0")
+        banner = "Failed to load mod 'broken_mod' - aborting startup:"
+        banner_index = result.stderr.find(banner)
+        traceback_index = result.stderr.find("Traceback")
+        if banner_index < 0:
+            raise SystemExit(f"Load-failure banner missing from stderr:\n{result.stderr}")
+        if traceback_index < 0 or banner_index > traceback_index:
+            raise SystemExit(f"Load-failure banner did not precede the traceback:\n{result.stderr}")
+        print("LOAD_FAILURE_BANNER_OK", flush=True)
 
 
 if __name__ == "__main__":
