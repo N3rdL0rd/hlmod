@@ -7,5 +7,8 @@ requires-python = ">=3.13"
 dependencies = [
     "pyinstaller>=6.17.0",
     "pyqt6>=6.10.0",
-    "requests>=2.32.5",
+    "hlmod-sdk",
 ]
+
+[tool.uv.sources]
+hlmod-sdk = { path = "../sdk", editable = true }

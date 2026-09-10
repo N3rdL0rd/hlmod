@@ -41,7 +41,7 @@ dev bytecode="PatchMe.hl":
     python3 tools/dev.py {{bytecode}}
 
 # Isolated custom Haxe fixtures; never loads mods from the working directory.
-test: test-framework test-bridge test-value test-events test-harmony test-devloop
+test: test-framework test-bridge test-value test-events test-harmony test-devloop test-sdk
 
 test-bridge:
     python3 tests/bridge/run.py
@@ -57,6 +57,9 @@ test-harmony:
 
 test-devloop:
     python3 tests/devloop/run.py
+
+test-sdk:
+    cd sdk && uv run python3 -m unittest discover -s tests
 
 test-framework:
     python3 -m unittest discover -s tests/framework
