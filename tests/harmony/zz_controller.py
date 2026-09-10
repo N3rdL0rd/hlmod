@@ -47,6 +47,22 @@ def _check_prologue_decoder() -> None:
     assert decode(b"\xc3", min_len=4) == -1, "ret reached before min_len"
     assert decode(b"\xe9\x00\x00\x00\x00", min_len=5) == -1, "unconditional jmp rel32 is never relocated"
 
+    # Regression: MinGW-GCC's `hl_sys_time` prologue pins two more gaps at
+    # once. `pxor xmm6,xmm6` (0F EF, zeroing an accumulator) and
+    # `cvtsi2sdq disp32(%rip),%xmm6` (0F 2A, loading a float constant)
+    # weren't recognized; the latter also has a RIP-relative memory operand
+    # - relative to wherever it's copied to - that must be relocated the
+    # same way a `call rel32`'s target is, or the resumed native would read
+    # garbage instead of its constant.
+    mingw_sys_time_prologue = (
+        b"\x48\x83\xec\x48"          # sub rsp, 0x48
+        b"\x0f\x29\x74\x24\x30"      # movaps [rsp+0x30], xmm6
+        b"\x66\x0f\xef\xf6"          # pxor xmm6, xmm6
+        b"\xf2\x48\x0f\x2a\x35\x30\x00\x00\x00"  # cvtsi2sdq 0x30(%rip), xmm6
+    )
+    assert decode(mingw_sys_time_prologue) == len(mingw_sys_time_prologue), "MinGW hl_sys_time prologue with RIP-relative float constant"
+
+
     print("NATIVE_HOOK_DECODER_OK", flush=True)
 
 
