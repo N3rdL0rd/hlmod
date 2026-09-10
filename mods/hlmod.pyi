@@ -214,6 +214,40 @@ def profile_end() -> None:
     The dump can be converted to a Chrome-readable flamegraph JSON with ProfileGen.hx.
     """
     ...
+def gc_major() -> None:
+    """
+    Forces a full GC collection cycle, blocking the calling thread until it completes.
+    """
+    ...
+
+def gc_stats() -> dict[str, float]:
+    """
+    Returns a dict with total_allocated, allocation_count, and current_memory (all in bytes/count,
+    accumulated since process start except current_memory).
+    """
+    ...
+
+def gc_enable(enabled: bool) -> None:
+    """
+    Enables or disables the GC. Disabling stops collection but allocation keeps working;
+    memory only grows until re-enabled and a collection runs.
+    """
+    ...
+
+def is_gc_ptr(pointer: HlPtr) -> bool:
+    """
+    Returns whether an HlPtr's address is managed by HL's GC (as opposed to e.g. a static
+    global, stack address, or foreign/native allocation).
+    """
+    ...
+
+def gc_memsize(pointer: HlPtr) -> Optional[int]:
+    """
+    Returns the GC allocation's size in bytes, or None if the pointer is not GC-managed
+    (see is_gc_ptr).
+    """
+    ...
+
 
 
 def create_subclass(base_type: int | HlPtr, cls: type,

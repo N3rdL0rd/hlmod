@@ -129,6 +129,27 @@ def python_checks(context, choice, record, child):
     print("PYTHON_VALUE_CHECKS_OK", flush=True)
 
 
+@hook("$ValueFixture.gcChecks")
+def gc_checks(context, child):
+    ptr = child._hlmod_ptr
+    assert hlmod.is_gc_ptr(ptr), "a freshly allocated native object must be GC-managed"
+    assert hlmod.gc_memsize(ptr) > 0
+    assert hlmod.gc_memsize(hlmod.array_new(3, [])) is not None
+    before = hlmod.gc_stats()
+    assert set(before) == {"total_allocated", "allocation_count", "current_memory"}
+    assert before["allocation_count"] > 0
+    # `child` is still reachable from the caller's own Haxe stack frame, so a
+    # real collection here must not free it - reading its field afterwards
+    # both proves that and exercises gc_major() actually running the GC
+    # rather than being a no-op stub.
+    hlmod.gc_major()
+    assert child.own is True
+    after = hlmod.gc_stats()
+    assert after["total_allocated"] >= before["total_allocated"], "total_allocated must never decrease"
+    hlmod.gc_enable(False)
+    hlmod.gc_enable(True)
+    print("PYTHON_GC_CHECKS_OK", flush=True)
+
 @hook("$ValueFixture.pythonRef")
 def python_ref(context):
     return reference

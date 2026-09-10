@@ -31,6 +31,7 @@ class ValueFixture {
     }
 
     static function pythonChecks(choice:ValueChoice, record:Dynamic, child:ValueChild):Void {}
+    static function gcChecks(child:ValueChild):Void {}
     static function pythonRef():hl.Ref<Int> { var storage = 0; return storage; }
     static function pythonRefChecks(value:hl.Ref<Int>):Void {}
     static function echoChoice(value:ValueChoice):ValueChoice { return value; }
@@ -70,6 +71,7 @@ class ValueFixture {
     static function main():Void {
         var record = makeRecord();
         pythonChecks(Payload(42, "native"), record, new ValueChild());
+        gcChecks(new ValueChild());
         check(Reflect.field(record, "count") == "changed", "Python dynamic write not visible");
         check(!Reflect.hasField(record, "remove"), "Python deletion not visible");
         var callback:Int->Int = Reflect.field(record, "callback");

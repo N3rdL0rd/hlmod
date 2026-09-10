@@ -39,7 +39,7 @@ def main() -> None:
             print(result.stdout, end="")
             if result.returncode:
                 raise SystemExit(f"Native value fixture exited with status {result.returncode}")
-            for marker in ("PYTHON_VALUE_CHECKS_OK", "PYTHON_REF_CHECKS_OK", "VALUE_FIXTURE_OK"):
+            for marker in ("PYTHON_VALUE_CHECKS_OK", "PYTHON_GC_CHECKS_OK", "PYTHON_REF_CHECKS_OK", "VALUE_FIXTURE_OK"):
                 if marker not in result.stdout:
                     raise SystemExit(f"Native value fixture did not reach {marker}")
 
