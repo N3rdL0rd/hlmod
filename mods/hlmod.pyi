@@ -183,6 +183,14 @@ def findex_for_name(name: str) -> int:
     """
     ...
 
+def type_index_for_name(name: str) -> int:
+    """
+    Gets the bytecode type index of an obj/struct/enum class by its full name (as it
+    appears in `inspect_native(...)["name"]`). Pass the result to `alloc_obj`,
+    `create_subclass`, `enum_new`, etc. Raises `KeyError` if no such type exists.
+    """
+    ...
+
 def native_findex(lib: str, name: str) -> int:
     """
     Gets the findex of an `@:hlNative(lib, name)` function declared in the loaded bytecode.

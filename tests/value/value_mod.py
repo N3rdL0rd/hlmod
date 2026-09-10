@@ -90,6 +90,9 @@ def python_checks(context, choice, record, child):
     raises(TypeError, inspect_native, HlPtr(1, 11))
     raises(IndexError, inspect_native, -1)
 
+    assert hlmod.type_index_for_name("ValueChild") == child._hlmod_ptr.type_index
+    raises(KeyError, hlmod.type_index_for_name, "NoSuchClassAtAll")
+
     writer = call("makeRefWriter")
     ref_type = inspect_native(writer)["arguments"][0]["type_index"]
     assert inspect_native(ref_type)["element_type"]["kind"] == "i32"
