@@ -9,12 +9,14 @@ import tomllib
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "mods"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "hlmod-hl" / "python"))
 
 from modcore import (
     Event, ModError, Registration, config, current_mod, finish_loading, load_all_stubs,
     load_mod, mods_loaded, reload_mod, shutdown, shutting_down, unload_mod,
 )
 from modcore._toml_writer import dumps as toml_dumps
+import stub_renderer
 
 
 class EventTests(unittest.TestCase):
@@ -368,6 +370,49 @@ class ConfigTests(unittest.TestCase):
         }
         rendered = toml_dumps(data)
         self.assertEqual(tomllib.loads(rendered), data)
+
+class StubRendererTests(unittest.TestCase):
+    """`editor_source` rebuilds .pyi bodies via ast.unparse; it must keep the
+    method docstring statement instead of discarding it with the rest of the
+    (runtime-only) body."""
+
+    def render_weapon(self, *, doc=None, file=None, line=None):
+        function = {"findex": 0, "type": 1, "owner": "pr.Weapon", "name": "fire", "arg_names": []}
+        if file is not None:
+            function["file"] = file
+            function["line"] = line
+        metadata = {
+            "code_hash": "abc", "native_type_count": 1,
+            "types": [
+                {"index": 0, "kind": stub_renderer.OBJ, "name": "pr.Weapon", "super": -1, "fields": [],
+                 "methods": [{"name": "fire", "findex": 0, "pindex": 0}], "bindings": []},
+                {"index": 1, "kind": stub_renderer.FUN, "args": [0], "return": 0},
+            ],
+            "functions": [function],
+            "constructors": [],
+            "docs": {"pr.Weapon": {"functions": {"fire": doc}}} if doc else {},
+        }
+        files = stub_renderer.Renderer(metadata, {}).render()
+        return files["pr/Weapon.pyi"]
+
+    def test_method_docstring_survives_into_pyi(self):
+        pyi = self.render_weapon(doc="Fires the weapon.")
+        self.assertIn('"""Fires the weapon."""', pyi)
+
+    def test_debug_location_is_appended_to_the_docstring(self):
+        pyi = self.render_weapon(doc="Fires the weapon.", file="Weapon.hx", line=42)
+        self.assertIn("Fires the weapon.", pyi)
+        self.assertIn("Weapon.hx:42", pyi)
+
+    def test_debug_location_alone_still_produces_a_docstring(self):
+        pyi = self.render_weapon(file="Weapon.hx", line=42)
+        self.assertIn('"""Weapon.hx:42"""', pyi)
+
+    def test_no_doc_and_no_debug_info_leaves_a_bare_body(self):
+        pyi = self.render_weapon()
+        method = pyi.split("def fire(self, /) -> _T0 | None:", 1)[1]
+        self.assertNotIn('"""', method.splitlines()[1])
+        self.assertIn("...", method)
 
 
 if __name__ == "__main__":
