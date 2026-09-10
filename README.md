@@ -291,6 +291,25 @@ safely-overwritable instruction sequence at the native's entry; if it can't,
 hooking raises `RuntimeError` rather than guessing at an instruction
 boundary. x86-64 only, matching hlmod's supported JIT targets.
 
+### Resolving names to indices
+
+`hlmod.findex_for_name("$Class.method")` resolves a bytecode function; the
+companion `hlmod.type_index_for_name("Class")` resolves an obj/struct/enum
+type the same way, for `alloc_obj`, `create_subclass`, `enum_new`, and
+anywhere else a type index is otherwise a hardcoded magic number. Both raise
+rather than guess when nothing matches (`KeyError` for a missing type,
+`NameError` for a missing function).
+
+### GC controls
+
+`hlmod.gc_major()` forces a full collection; `hlmod.gc_stats()` returns a
+dict of `total_allocated`/`allocation_count`/`current_memory`;
+`hlmod.gc_enable(bool)` toggles collection without stopping allocation.
+`hlmod.is_gc_ptr(ptr)`/`hlmod.gc_memsize(ptr)` report whether an `HlPtr` is
+GC-managed and its allocation size, for diagnosing memory pressure from a
+mod without an external profiler attached.
+
+
 ### Editor support
 
 Generated proxies ship with `.pyi` interfaces, so a type checker infers
