@@ -467,16 +467,3 @@ In the HL VM, a few fixes and tweaks have been made or merged from upstream PRs:
 - HaxeFoundation/hashlink#870 (Fix a null access in `ProfileGen.hx` on a
   finished thread, the flamegraph converter referenced above)
 
-hlmod-hl otherwise tracks a specific point in upstream history (see `git log`
-on the `hlmod-hl` submodule) rather than upstream's tip. As of this pass, that
-point is about 300 commits behind upstream `master`. The commits above were
-reviewed individually and pulled because they are small, self-contained bug
-fixes in files hlmod's own native-hook/Python-bridge work also touches (`gc.c`,
-`module.c`, `profile.c`, `std/cast.c`, `std/types.c`, `std/track.c`,
-`std/buffer.c`), so leaving them out only accumulates risk for no benefit.
-Everything else in that gap - the plugin-system runtime, DX12 additions, the
-SDL3 port, the native-Windows-unwinding/CET-longjmp rework, and routine CI
-bumps - was deliberately left alone this pass: each is either irrelevant to
-hlmod's Python-modding surface, or touches JIT/crash-handling internals that
-hlmod's own native-hook engine depends on closely enough that pulling it in
-needs its own dedicated review and test pass, not a same-session bulk merge.
