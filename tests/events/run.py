@@ -44,6 +44,8 @@ def main() -> None:
                 if marker not in result.stdout:
                     raise SystemExit(f"Events fixture did not reach {marker}")
     _check_load_failure_banner(root, fixture, args)
+    _check_external_mods_directory(root, fixture, args)
+    _check_relocated_mods_directory(root, fixture, args)
 
 
 def _check_load_failure_banner(root, fixture, args) -> None:
@@ -77,6 +79,86 @@ def _check_load_failure_banner(root, fixture, args) -> None:
         if traceback_index < 0 or banner_index > traceback_index:
             raise SystemExit(f"Load-failure banner did not precede the traceback:\n{result.stderr}")
         print("LOAD_FAILURE_BANNER_OK", flush=True)
+
+
+def _check_external_mods_directory(root, fixture, args) -> None:
+    """A mod's source does not have to live inside the game's own `mods/`:
+    HLMOD_EXTRA_MODS adds directories the loader also searches and imports
+    from, alongside the primary directory that still supplies hlobj.py,
+    hlvalues.py, and modcore."""
+    with tempfile.TemporaryDirectory(prefix="hlmod-events-external-") as temporary:
+        work = Path(temporary)
+        mods = work / "mods"
+        mods.mkdir()
+        for name in ("hlobj.py", "hlvalues.py"):
+            shutil.copy2(root / "mods" / name, mods / name)
+        shutil.copytree(root / "mods/modcore", mods / "modcore", ignore=shutil.ignore_patterns("__pycache__"))
+        external = work / "author_project"
+        external.mkdir()
+        (external / "author_mod.py").write_text(
+            'MOD_INFO = {"id": "author_mod", "dependencies": []}\n\n'
+            "from modcore import hook\n"
+            "import hlmod\n\n\n"
+            '@hook(hlmod.findex_for_name("$EventsFixture.verify"))\n'
+            "def verify(context, game):\n"
+            '    print("EXTERNAL_MOD_OK", flush=True)\n',
+            encoding="utf-8",
+        )
+        bytecode = work / "EventsFixture.hl"
+        subprocess.run(
+            [args.haxe, "-cp", str(fixture), "-main", "EventsFixture", "-hl", str(bytecode)],
+            check=True, timeout=60,
+        )
+        result = subprocess.run(
+            [str(args.hl.resolve()), str(bytecode)], cwd=work,
+            env={**os.environ, "PYTHONUNBUFFERED": "1", "HLMOD_EXTRA_MODS": str(external)},
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60,
+        )
+        print(result.stdout, end="")
+        if result.returncode:
+            raise SystemExit(f"External-mods fixture exited with status {result.returncode}")
+        for marker in ("EXTERNAL_MOD_OK", "EVENTS_FIXTURE_OK"):
+            if marker not in result.stdout:
+                raise SystemExit(f"External-mods fixture did not reach {marker}")
+
+
+def _check_relocated_mods_directory(root, fixture, args) -> None:
+    """HLMOD_MODS_DIR moves the primary mods directory itself, so an entire
+    game/mod install does not have to be named or located at `./mods`."""
+    with tempfile.TemporaryDirectory(prefix="hlmod-events-relocated-") as temporary:
+        work = Path(temporary)
+        relocated = work / "not_named_mods"
+        relocated.mkdir()
+        for name in ("hlobj.py", "hlvalues.py"):
+            shutil.copy2(root / "mods" / name, relocated / name)
+        shutil.copytree(root / "mods/modcore", relocated / "modcore", ignore=shutil.ignore_patterns("__pycache__"))
+        (relocated / "relocated_mod.py").write_text(
+            'MOD_INFO = {"id": "relocated_mod", "dependencies": []}\n\n'
+            "from modcore import hook\n"
+            "import hlmod\n\n\n"
+            '@hook(hlmod.findex_for_name("$EventsFixture.verify"))\n'
+            "def verify(context, game):\n"
+            '    print("RELOCATED_MOD_OK", flush=True)\n',
+            encoding="utf-8",
+        )
+        bytecode = work / "EventsFixture.hl"
+        subprocess.run(
+            [args.haxe, "-cp", str(fixture), "-main", "EventsFixture", "-hl", str(bytecode)],
+            check=True, timeout=60,
+        )
+        result = subprocess.run(
+            [str(args.hl.resolve()), str(bytecode)], cwd=work,
+            env={**os.environ, "PYTHONUNBUFFERED": "1", "HLMOD_MODS_DIR": str(relocated)},
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60,
+        )
+        print(result.stdout, end="")
+        if result.returncode:
+            raise SystemExit(f"Relocated-mods fixture exited with status {result.returncode}")
+        for marker in ("RELOCATED_MOD_OK", "EVENTS_FIXTURE_OK"):
+            if marker not in result.stdout:
+                raise SystemExit(f"Relocated-mods fixture did not reach {marker}")
+        if not (relocated / "stubs").is_dir():
+            raise SystemExit("Relocated mods directory did not receive generated stubs")
 
 
 if __name__ == "__main__":

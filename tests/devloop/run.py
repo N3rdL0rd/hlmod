@@ -89,6 +89,51 @@ def main() -> None:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+    _check_extra_mods(root, fixture, args)
+
+
+def _check_extra_mods(root, fixture, args) -> None:
+    """--extra-mods must watch a directory outside the primary mods folder
+    and actually get hl to load mods from it, not just watch it inertly."""
+    with tempfile.TemporaryDirectory(prefix="hlmod-devloop-extra-") as temporary:
+        work = Path(temporary)
+        mods = work / "mods"
+        mods.mkdir()
+        for name in ("hlobj.py", "hlvalues.py"):
+            shutil.copy2(root / "mods" / name, mods / name)
+        shutil.copytree(root / "mods/modcore", mods / "modcore", ignore=shutil.ignore_patterns("__pycache__"))
+        author_project = work / "author_project"
+        author_project.mkdir()
+        controller = author_project / "controller.py"
+        controller.write_text(controller_source("DEVLOOP_MARKER_V1"), encoding="utf-8")
+        bytecode = work / "DevLoopFixture.hl"
+        subprocess.run(
+            [args.haxe, "-cp", str(fixture), "-main", "DevLoopFixture", "-hl", str(bytecode)],
+            check=True, timeout=60,
+        )
+        dev_script = root / "tools/dev.py"
+        process = subprocess.Popen(
+            [sys.executable, str(dev_script), str(bytecode), "--hl", str(args.hl.resolve()),
+             "--mods", str(mods), "--extra-mods", str(author_project), "--poll", "0.1"],
+            cwd=work, env={**os.environ, "PYTHONUNBUFFERED": "1"},
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )
+        sink: "queue.Queue[str]" = queue.Queue()
+        threading.Thread(target=pump, args=(process.stdout, sink), daemon=True).start()
+        buffer: list[str] = []
+        try:
+            wait_for(sink, "DEVLOOP_MARKER_V1", 60, buffer)
+            controller.write_text(controller_source("DEVLOOP_MARKER_V2"), encoding="utf-8")
+            wait_for(sink, "[dev] Restarting due to change", 15, buffer)
+            wait_for(sink, "DEVLOOP_MARKER_V2", 60, buffer)
+            print("DEVLOOP_EXTRA_MODS_OK", flush=True)
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
 
 if __name__ == "__main__":

@@ -180,7 +180,7 @@ million event deliveries about 0.54 s. Treat these as a local baseline, not a
 guarantee.
 
 > [!NOTE]
-> The `hl` JIT VM binary expects a `./mods` directory relative to its working directory. Distribute `mods/hlobj.py`, `mods/hlvalues.py`, the `mods/modcore/` package and the `.pyi` files with your mods. Proxies under `mods/stubs/` are generated for the loaded bytecode; do not copy them between applications. `hl --generate-stubs game.hl` writes the SDK without running the game.
+> The `hl` JIT VM binary expects a `./mods` directory relative to its working directory by default (override with `HLMOD_MODS_DIR`). Distribute `mods/hlobj.py`, `mods/hlvalues.py`, the `mods/modcore/` package and the `.pyi` files with your mods. Proxies under `mods/stubs/` are generated for the loaded bytecode; do not copy them between applications. `hl --generate-stubs game.hl` writes the SDK without running the game.
 
 ### Dev loop
 
@@ -196,6 +196,38 @@ It launches `hl game.hl`, watches `mods/**/*.py` (excluding the generated
 `mods/stubs/` tree) plus `hlmod.toml`/`typing_overlays.json`, and restarts the
 process on any change. This is a local iteration tool, not packaging: it does
 not build anything and has no relation to the installer or the nightly build.
+
+### Developing outside the mods directory
+
+A mod's own source does not have to live inside a game's `mods/` directory.
+`HLMOD_EXTRA_MODS` adds one or more additional directories (`os.pathsep`-separated,
+so `:` on Linux/macOS and `;` on Windows) that are searched and imported from
+alongside the primary directory:
+
+```sh
+HLMOD_EXTRA_MODS=/path/to/my_mod_project hl game.hl
+```
+
+The primary directory (`./mods` by default, or wherever `HLMOD_MODS_DIR`
+points) still supplies `hlobj.py`, `hlvalues.py`, `modcore/` and the generated
+`stubs/`; your own project directory holds only your mod's source. Point your
+editor's `extraPaths` (Pyright/pylance) or equivalent at the primary directory
+so `from stubs.pr import Game` and `from modcore import hook` resolve, while
+your project's own root stays clean of generated files and other mods.
+
+`HLMOD_MODS_DIR` relocates the primary directory entirely, so a game/mod
+install does not have to be named or located at `./mods`:
+
+```sh
+HLMOD_MODS_DIR=/path/to/install/mods hl game.hl
+```
+
+`tools/dev.py` accepts the same shape directly, watching and loading from an
+external project without exporting anything by hand:
+
+```sh
+python3 tools/dev.py game.hl --mods /path/to/install/mods --extra-mods /path/to/my_mod_project
+```
 
 ## Mods, hooks and events
 
