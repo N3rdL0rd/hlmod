@@ -62,6 +62,16 @@ def _check_prologue_decoder() -> None:
     )
     assert decode(mingw_sys_time_prologue) == len(mingw_sys_time_prologue), "MinGW hl_sys_time prologue with RIP-relative float constant"
 
+    # Regression: 0x69/0x6B/0x80/0x81/0x83/0xC6/0xC7 pair a ModRM memory
+    # operand with a trailing immediate; a RIP-relative form of these was
+    # refused outright rather than risk mislocating the relocation fixup.
+    # `modrm_len` only measures the ModRM+SIB+disp portion (never the
+    # immediate after it), so the same "last 4 bytes of that portion"
+    # position used everywhere else applies here too - `add dword
+    # [rip+disp32], imm8` correctly decodes as ModRM+disp32+imm8 (7 bytes).
+    rip_relative_add_imm8 = b"\x83\x05\x10\x00\x00\x00\x2a"  # add dword [rip+0x10], 0x2a
+    assert decode(rip_relative_add_imm8) == len(rip_relative_add_imm8), "RIP-relative group-1 op with imm8 must relocate, not refuse"
+
 
     print("NATIVE_HOOK_DECODER_OK", flush=True)
 
