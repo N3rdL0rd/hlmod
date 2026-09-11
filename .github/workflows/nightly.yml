@@ -176,6 +176,7 @@ jobs:
       run: |
           python3 -m unittest discover -s tests/framework -v
           python3 tests/bridge/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/interfaces/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/value/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/events/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/harmony/run.py --hl hlmod-hl/build/bin/hl
@@ -189,6 +190,7 @@ jobs:
       run: |
           python -m unittest discover -s tests/framework -v
           python tests/bridge/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/interfaces/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
@@ -202,6 +204,7 @@ jobs:
       run: |
           python -m unittest discover -s tests/framework -v
           python tests/bridge/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/interfaces/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/value/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe

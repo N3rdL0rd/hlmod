@@ -49,7 +49,7 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 - [x] Harmony-style prefix/postfix patches sharing the same hook chain as `hook()`
 - [x] Hook `@:hlNative` functions via an x86-64 inline detour, not just JIT-compiled bytecode
 - [x] Global TOML-backed configuration (`modcore.config`), one section per mod
-- [ ] File-watcher hot-reload (automatic mod reload on file save without game restart)
+- [x] File-watcher hot-reload (automatic mod reload on file save without game restart)
 - [x] TCP / socket REPL for interactive live inspection and runtime testing
 - [ ] Deep crashlink integration: realtime bytecode poking and mid-function opcode patching
 - [ ] Cleaner extension points for game-specific base mods and helper libraries

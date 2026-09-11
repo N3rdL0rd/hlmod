@@ -37,13 +37,15 @@ class HlObjectMeta(type):
     Metaclass that forwards class-level access to a type's HL static object when one exists.
     """
 
-    def __new__(mcls, name, bases, namespace, **kwargs):
+    def __new__(mcls, name, bases, namespace, implements=(), **kwargs):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
         if namespace.get("_hl_generated", False):
             return cls
         native_bases = [base for base in bases if isinstance(base, HlObjectMeta)
                         and getattr(base, "_hl_type_index", None) is not None]
         if not native_bases:
+            if implements:
+                raise TypeError("implements= requires a native base class to attach synthesized methods to")
             return cls
         if len(native_bases) != 1:
             raise TypeError("A Python HL subclass must have exactly one native base")
@@ -66,7 +68,19 @@ class HlObjectMeta(type):
             if not callable(implementation) or isinstance(implementation, (staticmethod, classmethod)):
                 raise TypeError(f"HL override {python_name!r} must be an instance method")
             overrides[native_name] = implementation
-        native_type = hlmod.create_subclass(base._hl_type_index, cls, overrides)
+
+        interface_indices = [getattr(iface, "_hl_type_index", iface) for iface in implements]
+        for iface_index in interface_indices:
+            for field in inspect_native(iface_index)["fields"]:
+                field_name = field["name"]
+                if field_name in overrides or field_name not in cls.__dict__:
+                    continue
+                implementation = cls.__dict__[field_name]
+                if not callable(implementation) or isinstance(implementation, (staticmethod, classmethod)):
+                    raise TypeError(f"Interface implementation {field_name!r} must be an instance method")
+                overrides[field_name] = implementation
+
+        native_type = hlmod.create_subclass(base._hl_type_index, cls, overrides, interface_indices)
         type.__setattr__(cls, "_hl_type_index", native_type)
         type.__setattr__(cls, "_hl_generated", False)
         type.__setattr__(cls, "_hl_static_obj", None)
