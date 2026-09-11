@@ -55,7 +55,7 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 - [ ] Cleaner extension points for game-specific base mods and helper libraries
 - [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
 - [ ] Generic Heaps.IO base library (`heapsmod`) across all Shiro / Motion Twin games:
-  - [ ] Virtual filesystem PAK mounting (`hxd.fs`)
+  - [x] `hxd.fs.FileSystem` loose-file overlay (`mods/heaps`), transparent regardless of `initEmbed`/`initLocal`/`initPak`
   - [ ] CastleDB table inspection, diffing and runtime patching
   - [ ] Generic `hxbit` save-game serialization hooks
 - [ ] Game-specific base libraries:
