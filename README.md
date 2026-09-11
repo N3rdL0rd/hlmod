@@ -44,7 +44,7 @@ hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Ju
 - [x] Hook `@:hlNative` functions via an x86-64 inline detour, not just JIT-compiled bytecode
 - [x] Global TOML-backed configuration (`modcore.config`), one section per mod
 - [ ] File-watcher hot-reload (automatic mod reload on file save without game restart)
-- [ ] TCP / socket REPL for interactive live inspection and runtime testing
+- [x] TCP / socket REPL for interactive live inspection and runtime testing
 - [ ] Deep crashlink integration: realtime bytecode poking and mid-function opcode patching
 - [ ] Cleaner extension points for game-specific base mods and helper libraries
 - [ ] Better packaging and release ergonomics for mods, stubs, and framework updates
@@ -162,6 +162,7 @@ just test-bridge     # conversions, subclasses, GC ownership
 just test-value      # enums, dynamic objects, references, inspection
 just test-events      # core events, composed hooks, mod lifecycle
 just test-framework   # framework units, no HL runtime required
+just test-repl        # native REPL protocol, isolation, idle-client shutdown
 just test-editor      # Pyright acceptance for the generated SDK
 just bench            # dispatch, collector and broadcast timings
 ```
@@ -247,6 +248,29 @@ on Windows). `hlmod-sdk new` reads that registry to scaffold a project
 exactly as described above - `pyrightconfig.json` pointing at the install's
 `mods/`, a starter mod file, and a README - for any install it knows about,
 without needing to remember or retype paths.
+
+### REPL
+
+Setting `HLMOD_REPL_PORT` starts a loopback-only TCP REPL alongside the game,
+in a background thread that runs independently of the main HL thread:
+
+```sh
+HLMOD_REPL_PORT=4711 hl game.hl
+```
+
+Connect with any raw TCP client, for example `nc 127.0.0.1 4711`. Each
+connection gets its own persistent namespace and behaves like `python3 -i`:
+expressions auto-print, multi-line `def`/`if` blocks buffer until a blank
+line closes them, and exceptions print a traceback instead of dropping the
+connection. A few shorthand commands are checked before falling back to
+Python:
+
+- `help` - lists the shorthand commands
+- `mods` - every loaded mod, its state and dependencies
+- `hooks` - every registered native hook, its owning mod and priority
+
+The REPL only binds to `127.0.0.1` - it is never reachable from the network -
+and it is entirely optional: omitting `HLMOD_REPL_PORT` never starts it.
 
 ## Mods, hooks and events
 

@@ -180,6 +180,7 @@ jobs:
           python3 tests/events/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/harmony/run.py --hl hlmod-hl/build/bin/hl
           python3 tests/devloop/run.py --hl hlmod-hl/build/bin/hl
+          python3 tests/repl/run.py --hl hlmod-hl/build/bin/hl
           python3 -m pip install --quiet requests
           python3 -m unittest discover -s sdk/tests
 
@@ -192,6 +193,7 @@ jobs:
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/devloop/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/repl/run.py --hl hlmod-hl/build/bin/hl.exe
           python -m pip install --quiet requests
           python -m unittest discover -s sdk/tests
 
@@ -204,6 +206,7 @@ jobs:
           python tests/events/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/harmony/run.py --hl hlmod-hl/build/bin/hl.exe
           python tests/devloop/run.py --hl hlmod-hl/build/bin/hl.exe
+          python tests/repl/run.py --hl hlmod-hl/build/bin/hl.exe
           python -m pip install --quiet requests
           python -m unittest discover -s sdk/tests
 
