@@ -94,6 +94,57 @@ falls through to ordinary Python attribute lookup, which is exactly how a
 non-overridden method call ends up running the generated stub's own
 `hlmod.call(findex, ...)` body.
 
+
+## Implementing a Haxe interface that doesn't exist yet on the native side
+
+Everything above covers *overriding* a method some native ancestor already
+has. `implements=` (`create_subclass`'s `interfaces` parameter, under the
+hood) covers the opposite case: giving a Python subclass brand-new methods
+that satisfy a Haxe `interface`, when the native base class the subclass
+extends doesn't declare - or even know about - that interface at all.
+
+```python
+from stubs import PlainBase
+
+class PyGreeter(PlainBase, implements=[greeter_type]):
+    def greet(self, name):
+        return "hi " + name
+
+    def shout(self, name):
+        return "hello " + name.upper()
+```
+
+`greeter_type` here is the bytecode type index of a Haxe `interface Greeter`
+that `PlainBase` never mentions. `HlObjectMeta.__new__` resolves each entry in
+`implements` to a type index (accepting either a raw int or another
+`HlObjectMeta`-governed class's own `_hl_type_index`), then walks that
+interface's `inspect_native(...)["fields"]` looking for a same-named,
+non-static-method entry your class body actually defines and that the normal
+override pass didn't already claim. Anything that matches gets folded into the
+same `overrides` dict handed to `hlmod.create_subclass`, alongside genuinely
+overridden ancestor methods - from `create_subclass`'s point of view there's
+no difference between "patch an existing proto slot" and "add a brand-new
+one," so the C side synthesizes fresh native proto entries for `greet` and
+`shout` on `PyGreeter`'s new type, entries that were never part of `PlainBase`
+or anything it inherits from.
+
+The result is a real HL value that satisfies `Greeter` structurally - passing
+a `PyGreeter` instance anywhere Haxe code expects a `Greeter` works exactly
+like passing a native class that declared `implements Greeter` up front, up
+to and including `ToVirtual` casts: assigning it into an interface-typed field
+or parameter builds the same structural virtual wrapper HL's own compiler
+would emit for a real implementor, resolved by matching field names against
+`PyGreeter`'s (partly synthesized) proto table. Multiple instances of the
+same `implements=`-declared class dispatch independently, and a synthesized
+method raising in Python propagates as an ordinary catchable HL exception,
+the same as any hook or override elsewhere in hlmod.
+
+This only ever *adds* proto entries; it can't remove or narrow one. A class
+using `implements=` still needs exactly one native base to attach the
+synthesized methods to - `implements=` without a native base to build on
+raises `TypeError`, same as any other `HlObjectMeta` subclass with no native
+ancestor at all.
+
 ## Overriding a live `dynamic` field without subclassing at all
 
 Haxe's `dynamic function` methods are a different animal from ordinary virtual
