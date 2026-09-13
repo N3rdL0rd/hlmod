@@ -14,7 +14,7 @@ Join the [Hashlink Modding Community Discord](https://discord.gg/Es8ZpVkPey) for
 
 Astute observation! Although DCCM is fantastic and very well-developed, it exists *specifically* for Dead Cells. Although, with some work, DCCM could be generalized to other applications and games (think: Wartales, Northgard, Dune: Spice Wars, etc.), it's still *just a Dead Cells modding tool*.
 
-hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Just Works everywhere Hashlink does. In the long run, it should be able to do everything that DCCM does, and possibly even more!
+hlmod aims to be a truly generic, easy-to-use Hashlink modding framework that Just Works everywhere Hashlink does. In the long run, it should be able to do everything that DCCM does, and possibly even more! See [Comparisons](./comparisons.md) for something lazy I threw together in 10 minutes comparing hlmod, DCCM, and pyhl.
 
 ### So... why Python?
 
