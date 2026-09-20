@@ -170,9 +170,6 @@ jobs:
       shell: msys2 {0}
       run: |
           cp /mingw64/bin/libgcc_s_seh-1.dll /mingw64/bin/libstdc++-6.dll /mingw64/bin/libwinpthread-1.dll hlmod-hl/build/bin/
-          # sdl.hdll/openal.hdll import these by name; shipping the hdll without
-          # them makes the library unloadable next to hl.exe.
-          cp /mingw64/bin/SDL2.dll /mingw64/bin/OpenAL32.dll hlmod-hl/build/bin/
 
     - name: Run test suites (Linux)
       if: runner.os == 'Linux'
@@ -349,15 +346,13 @@ jobs:
         Copy-Item -Path "hdlls-repo/*.hdll" -Destination $ARTIFACT_DIR
         Write-Host "Copied pre-built hdlls to artifact directory."
 
-        if ("${{ matrix.compiler }}" -eq "msvc") {
-          # sdl.hdll and openal.hdll import SDL2.dll/OpenAL32.dll; without them
-          # next to hl.exe the loader fails the whole library with a bare
-          # "Failed to load library", and the broken copy in the exe directory
-          # shadows any working one the game ships.
-          Copy-Item -Path "hlmod-hl/include/sdl/lib/x64/SDL2.dll" -Destination $ARTIFACT_DIR
-          Copy-Item -Path "hlmod-hl/include/openal/bin/Win64/soft_oal.dll" -Destination (Join-Path $ARTIFACT_DIR "OpenAL32.dll")
-          Write-Host "Copied SDL2 and OpenAL runtime DLLs to artifact directory."
-        }
+        # sdl.hdll and openal.hdll import SDL2.dll/OpenAL32.dll - both compilers
+        # link the vendored SDKs fetched above, so both need these shipped. An
+        # hdll whose imports are missing fails to load, and the broken copy next
+        # to hl.exe shadows any working one the game ships.
+        Copy-Item -Path "hlmod-hl/include/sdl/lib/x64/SDL2.dll" -Destination $ARTIFACT_DIR
+        Copy-Item -Path "hlmod-hl/include/openal/bin/Win64/soft_oal.dll" -Destination (Join-Path $ARTIFACT_DIR "OpenAL32.dll")
+        Write-Host "Copied SDL2 and OpenAL runtime DLLs to artifact directory."
 
     - name: Exclude test directory from artifact
       shell: bash
