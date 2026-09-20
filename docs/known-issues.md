@@ -8,7 +8,12 @@ Here's what's actually broken, actually limited, or actually just Like That.
 
 ## DirectX support sucks
 
-Anything depending on older versions of HL's DirectX backend will crash, and will sometimes even segfault. This isn't an hlmod bug so much as an inherited one - it's a property of the DirectX bindings themselves, and short of rewriting a graphics backend nobody asked us to touch, there isn't a clean fix. If the game in question ships an OpenGL executable (Dead Cells does), use that one instead to avoid this.
+Games ship the Haxe bindings of the `directx.hdll` they were compiled against, and that library's ABI has drifted a lot over the years. hlmod sorta tries to absorb the two ways that drift breaks a game:
+
+- `dx.Event` has gained fields (`mouseXRel`/`mouseYRel`, `scanCode`, `dropFile`). Rather than blitting its own struct into the game's object - which shifts every later field and writes past the end of the allocation for older classes - `win_get_next_event` resolves the real field offsets from the object's own runtime type and writes only the fields that class actually has. Evoland 2, whose `dx.Event` stops at `value`, used to read a stale `wheelDelta` as its `keyCode` and die on the first keypress after a scroll with `Invalid array index -1`.
+- When a primitive's C signature changed upstream (`win_clip_cursor` gained an `enable` flag, `create_depth_stencil_view` a `readOnly` flag), bytecode declaring the older arity can no longer bind and the VM aborts with `Invalid signature for function`. `directx.hdll` therefore exports the historical signatures alongside the current one as `hlp_<name>__v1`, `hlp_<name>__v2`, ..., and the module loader binds the first variant matching the bytecode, logging `bound legacy ABI variant vN`. If nothing matches it still aborts rather than guessing.
+
+What's left is the graphics path itself: anything leaning on older DirectX bindings can still crash or segfault, and that's inherited from the bindings rather than something hlmod can paper over without rewriting a backend nobody asked us to touch. If the game ships an OpenGL executable (eg. Dead Cells), prefer it.
 
 ## Native hooking is x86-64 only
 
