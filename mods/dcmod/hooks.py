@@ -6,6 +6,7 @@ from stubs import h2d
 from stubs.pr import Game, TitleScreen
 from stubs.ui import NewsPanel
 from . import events, globals
+from .settings import settings
 from .util import log
 
 
@@ -25,12 +26,12 @@ def hook_console_log(self: HookContext[[ui.Console, str, Optional[int]], None], 
 @hook("pr.TitleScreen.setMiscTexts")
 def hook_titlescreen_setMiscTexts(self: HookContext[[TitleScreen], None], this: TitleScreen) -> None:
     self.call_next(this)
-    if globals.CUSTOM_BUILD_TEXT:
+    if settings.custom_build_text:
         this.build.set_text(this.build.text + " " + globals.BUILD_TEXT)
 
 @hook("tools.pak.$PakUtils.getPakStampHash")
 def hook_pakutils_getPakStampHash(self: HookContext[[], str]) -> str:
-    if not globals.PREDICTABLE_STAMP:
+    if not settings.predictable_stamp:
         return self.call_next()
     return "0022228129b0973a12d14548434b3741debcd3a38734f1e0dd1f3b3f7acdd91c" # for commit 50ed44f, latest v35. in case you fuck something up version-wise ;)
 
@@ -43,19 +44,19 @@ def hook_logutils_log(self: HookContext[[str, Any, Any], None], text: str, sever
 
 @hook("ui.NewsPanel.updateVisible")
 def hook_ui_NewsPanel_updateVisible(self: HookContext[[NewsPanel], None], this: NewsPanel) -> None:
-    if not globals.REMOVE_NEWS:
+    if not settings.remove_news:
         return self.call_next(this)
 
 @hook("ui.NewsPanel.focusIn")
 def hook_ui_NewsPanel_focusIn(self: HookContext[[NewsPanel], None], this: NewsPanel) -> None:
-    if not globals.REMOVE_NEWS:
+    if not settings.remove_news:
         return self.call_next(this)
     
 @hook("pr.TitleScreen.update")
 def hook_pr_TitleScreen_update(self: HookContext[[TitleScreen], None], this: TitleScreen) -> None:
     self.call_next(this)
 
-    if globals.REMOVE_NEWS:
+    if settings.remove_news:
         if this.isMainMenu:
             this.updateBtn.set_visible(False)
 
@@ -63,7 +64,7 @@ def hook_pr_TitleScreen_update(self: HookContext[[TitleScreen], None], this: Tit
 def hook_pr_TitleScreen_postUpdate(self: HookContext[[TitleScreen], None], this: TitleScreen) -> None:
     self.call_next(this)
 
-    if globals.HIDE_CONTROLLER_WARNING:
+    if settings.hide_controller_warning:
         pad_warning = this.padWarning
         if pad_warning is not None:
             pad_warning.visible = False
