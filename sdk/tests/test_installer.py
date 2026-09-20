@@ -56,12 +56,44 @@ class CancellationTests(unittest.TestCase):
             installer.install("/tmp", "Linux-gcc-Release", callbacks=callbacks)
 
 
+def write_pe(path: str, machine: int) -> None:
+    """Minimal PE image header: MZ stub, e_lfanew, PE signature, machine."""
+    header = bytearray(0x48)
+    header[0:2] = b"MZ"
+    header[0x3C:0x40] = (0x40).to_bytes(4, "little")
+    header[0x40:0x44] = b"PE\0\0"
+    header[0x44:0x46] = machine.to_bytes(2, "little")
+    with open(path, "wb") as handle:
+        handle.write(header)
+
+
+def write_elf(path: str, elf_class: int) -> None:
+    header = bytearray(0x10)
+    header[0:4] = b"\x7fELF"
+    header[4] = elf_class
+    with open(path, "wb") as handle:
+        handle.write(header)
+
+
 class DetectTweaksTests(unittest.TestCase):
     def test_sdl_detected_regardless_of_platform(self):
         with tempfile.TemporaryDirectory() as d:
-            open(os.path.join(d, "sdl.hdll"), "w").close()
+            write_pe(os.path.join(d, "sdl.hdll"), 0x8664)
             tweaks = installer.detect_tweaks(d)
             self.assertIn(installer.Tweak.USE_EXISTING_SDL, tweaks)
+
+    def test_32_bit_library_is_not_reused(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_pe(os.path.join(d, "sdl.hdll"), 0x014C)  # i386
+            self.assertNotIn(installer.Tweak.USE_EXISTING_SDL, installer.detect_tweaks(d))
+
+    def test_elf_class_decides_reuse_on_posix(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "sdl.hdll")
+            write_elf(path, 1)  # ELFCLASS32
+            self.assertFalse(installer.is_reusable_native(path))
+            write_elf(path, 2)  # ELFCLASS64
+            self.assertTrue(installer.is_reusable_native(path))
 
     def test_no_hints_means_no_tweaks(self):
         with tempfile.TemporaryDirectory() as d:

@@ -142,6 +142,33 @@ def make_executable(path: str) -> None:
     os.chmod(path, mode)
 
 
+def is_reusable_native(path: str) -> bool:
+    """True if `path` is a 64-bit native library hlmod can actually load.
+
+    hlmod only ships 64-bit builds, but plenty of HashLink games from the
+    32-bit era ship 32-bit `.hdll`s next to their bytecode. Copying one of
+    those over hlmod's own leaves the loader reporting
+    `error 193: %1 is not a valid Win32 application`, so the reuse tweaks
+    have to look at the image header rather than just the filename.
+    """
+    try:
+        with open(path, "rb") as handle:
+            magic = handle.read(4)
+            if magic[:2] == b"MZ":  # PE
+                handle.seek(0x3C)
+                pe_offset = int.from_bytes(handle.read(4), "little")
+                handle.seek(pe_offset)
+                if handle.read(4) != b"PE\0\0":
+                    return False
+                return int.from_bytes(handle.read(2), "little") == 0x8664  # AMD64
+            if magic == b"\x7fELF":
+                handle.seek(4)
+                return handle.read(1) == b"\x02"  # ELFCLASS64
+    except OSError:
+        return False
+    return False
+
+
 def map_value(x, src_min, src_max, dst_min, dst_max):
     return ((x - src_min) / (src_max - src_min)) * (dst_max - dst_min) + dst_min
 
@@ -225,11 +252,11 @@ def extract(zip_path: str, directory: str, callbacks: InstallCallbacks) -> str:
 
 def detect_tweaks(directory: str) -> list[Tweak]:
     tweaks: list[Tweak] = []
-    if os.path.exists(os.path.join(directory, "steam.hdll")) and os.name == "posix":
+    if is_reusable_native(os.path.join(directory, "steam.hdll")) and os.name == "posix":
         tweaks.append(Tweak.USE_EXISTING_STEAM)
-    if os.path.exists(os.path.join(directory, "sdl.hdll")):
+    if is_reusable_native(os.path.join(directory, "sdl.hdll")):
         tweaks.append(Tweak.USE_EXISTING_SDL)
-    if os.path.exists(os.path.join(directory, "openal.hdll")) and os.name == "nt":
+    if is_reusable_native(os.path.join(directory, "openal.hdll")) and os.name == "nt":
         tweaks.append(Tweak.USE_EXISTING_OPENAL)
     if os.path.exists(os.path.join(directory, "deadcells")) or os.path.exists(os.path.join(directory, "deadcells.exe")):
         tweaks.append(Tweak.INSTALL_DCMOD)
@@ -249,23 +276,29 @@ def install_files(directory: str, extract_dir: str, tweaks: list[Tweak]) -> None
         with open(os.path.join(directory, "run_hlmod.sh"), "w") as f:
             f.write(LAUNCH_SCRIPT_LINUX)
         make_executable(os.path.join(directory, "run_hlmod.sh"))
-        if Tweak.USE_EXISTING_STEAM in tweaks:
-            shutil.copy(os.path.join(directory, "steam.hdll"), os.path.join(extract_dir, "steam.hdll"))
-            shutil.copy(os.path.join(directory, "libsteam_api.so"), os.path.join(extract_dir, "libsteam_api.so"))
+        steam_src = os.path.join(directory, "steam.hdll")
+        steam_api_src = os.path.join(directory, "libsteam_api.so")
+        if Tweak.USE_EXISTING_STEAM in tweaks and is_reusable_native(steam_src) and is_reusable_native(steam_api_src):
+            shutil.copy(steam_src, os.path.join(extract_dir, "steam.hdll"))
+            shutil.copy(steam_api_src, os.path.join(extract_dir, "libsteam_api.so"))
     else:
         with open(os.path.join(directory, "run_hlmod.bat"), "w") as f:
             f.write(LAUNCH_SCRIPT_WINDOWS)
 
+    # Each reuse below replaces a library hlmod ships, so a 32-bit original
+    # from the game folder must be left where it is: hlmod is 64-bit only.
     if Tweak.USE_EXISTING_SDL in tweaks:
         sdl_src = os.path.join(directory, "sdl.hdll")
-        if os.path.exists(sdl_src):
+        if is_reusable_native(sdl_src):
             shutil.copy(sdl_src, os.path.join(extract_dir, "sdl.hdll"))
 
     if Tweak.USE_EXISTING_OPENAL in tweaks:
-        if os.path.exists(os.path.join(directory, "OpenAL32.dll")):
-            shutil.copy(os.path.join(directory, "OpenAL32.dll"), os.path.join(extract_dir, "OpenAL32.dll"))
         openal_src = os.path.join(directory, "openal.hdll")
-        if os.path.exists(openal_src):
+        openal_dll_src = os.path.join(directory, "OpenAL32.dll")
+        # Only reuse the pair together; hlmod's OpenAL32.dll and the game's
+        # openal.hdll are not guaranteed to agree on exported symbols.
+        if is_reusable_native(openal_src) and is_reusable_native(openal_dll_src):
+            shutil.copy(openal_dll_src, os.path.join(extract_dir, "OpenAL32.dll"))
             shutil.copy(openal_src, os.path.join(extract_dir, "openal.hdll"))
 
     if Tweak.INSTALL_DCMOD in tweaks:
